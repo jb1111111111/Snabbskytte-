@@ -35,7 +35,7 @@ select,input,textarea{font:16px Barlow,sans-serif;padding:9px;border:1px solid v
 .msg{padding:8px 10px;border-left:4px solid var(--ac);background:var(--bg);margin-bottom:10px;border-radius:4px}
 h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
 </style></head><body><main>
-<section id="auth" class="card" style="display:none">
+<section id="auth" class="card">
   <h2>Logga in till Snabbskytte</h2>
   <p class="mu">Dina träningsresultat sparas på ditt privata konto och kan användas på flera enheter.</p>
   <label for="email">E-post</label>
@@ -46,7 +46,7 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
   <button class="btn" onclick="authAction('signup')">Skapa konto</button>
   <div id="authmsg" class="mu" style="margin-top:8px"></div>
 </section>
-<div id="app" style="display:none"><nav id="nav"></nav><div id="v"></div>
+<div id="app"><nav id="nav"></nav><div id="v"></div>
 <div class="mu" style="text-align:center;margin:12px 0">
   <span id="syncstatus">Molnlagring ansluten</span> · <button class="btn" onclick="logout()">Logga ut</button>
 </div></div></main>
@@ -180,7 +180,7 @@ window.sb = null;
 
 function showAuth(message){
   document.getElementById('auth').style.display='block';
-  document.getElementById('app').style.display='none';
+  document.getElementById('app').style.display='block';
   document.getElementById('authmsg').textContent=message||'';
 }
 function showApp(){
