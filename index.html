@@ -30,6 +30,7 @@ nav button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:6px 4px;border-bottom:1px solid var(--ln);text-align:left}
 td.r{text-align:right}
+.level-toggle{font:600 11px Barlow,sans-serif;padding:2px 7px;margin-top:3px;border:1px solid var(--ln);border-radius:5px;background:var(--bg);color:var(--ink);min-width:34px}.level-toggle.off{opacity:.65}
 select,input,textarea{font:16px Barlow,sans-serif;padding:9px;border:1px solid var(--ln);border-radius:7px;background:var(--bg);color:var(--ink);width:100%}
 .btn{padding:10px 12px;border:1px solid var(--ln);background:var(--bg);color:var(--ink);border-radius:7px;font:600 15px Barlow,sans-serif;margin:3px 3px 3px 0}
 .msg{padding:8px 10px;border-left:4px solid var(--ac);background:var(--bg);margin-bottom:10px;border-radius:4px}
@@ -61,7 +62,7 @@ var TEST={3:[6,9],7:[6,9],15:[8,9],25:[10,8],50:[12,7]};
 var MAXR={25:9,50:7};
 var tab='h',cur=null,shots=[],msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support';
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
-function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};if(!p.tracks[k].cells)p.tracks[k].cells={};if(!p.tracks[k].log)p.tracks[k].log=[];if(!p.tracks[k].tests)p.tracks[k].tests=[]})}
+function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};if(!p.tracks[k].cells)p.tracks[k].cells={};if(!p.tracks[k].log)p.tracks[k].log=[];if(!p.tracks[k].tests)p.tracks[k].tests=[];if(!p.tracks[k].enabled)p.tracks[k].enabled={};D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(p.tracks[k].enabled[key]===undefined)p.tracks[k].enabled[key]=true})})})}
 S.pistols.forEach(ensureTracks);
 var cloudUser=null, cloudReady=false, cloudSaving=false;
 function setSync(t){var el=document.getElementById('syncstatus');if(el)el.textContent=t}
@@ -95,13 +96,16 @@ S.pistols.forEach(function(p){if(!Object.keys(p.cells).length){pid=p.id;preset(1
 function val(z){return z=='Bom'?0:z=='X'?10:+z}
 function pick(keep){
  if(!keep){var pool=S.pistols.filter(function(p){return p.on!==0});if(!pool.length)pool=S.pistols;
-  var pw=pool.map(function(p){pid=p.id;activeTrackId='support';return D.reduce(function(a,d){return a+[1,2].reduce(function(b,m){return b+steps(m,d).length-cell(m,d).i},0)},0)});
-  var r0=Math.random()*pw.reduce(function(a,b){return a+b},0),j=0;while(j<pool.length-1&&r0>pw[j]){r0-=pw[j];j++}pid=pool[j].id}
- activeTrackId=Math.random()<.5?'support':'unsupported';
- var w=D.map(function(d){return [1,2].reduce(function(a,m){return a+steps(m,d).length-cell(m,d).i},0)});
- for(var k=0;k<6;k++){var t=w.reduce(function(a,b){return a+b},0);w=w.map(function(x){return Math.min(x/t,.3)});var s=w.reduce(function(a,b){return a+b},0);w=w.map(function(x){return x/s})}
- var r=Math.random(),i=0;while(i<4&&r>w[i]){r-=w[i];i++}
- var d=D[i],m=Math.random()<.67?1:2;cur={d:d,m:m,support:activeTrackId};shots=[];
+  var pw=pool.map(function(p){return ['support','unsupported'].reduce(function(total,k){ensureTracks(p);return total+D.reduce(function(a,d){return a+[1,2].reduce(function(b,m){var en=p.tracks[k].enabled[m+'-'+d]!==false;return b+(en?Math.max(0,steps(m,d).length-p.tracks[k].cells[m+'-'+d]?.i||0):0)},0)},0)},0)});
+  if(pw.every(function(x){return x===0})){alert('Slå på minst en nivå under Status för att kunna slumpa serier.');cur=null;return}
+  var totalP=pw.reduce(function(a,b){return a+b},0),rp=Math.random()*totalP,j=0;while(j<pool.length-1&&rp>pw[j]){rp-=pw[j];j++}pid=pool[j].id}
+ var tracks=['support','unsupported'].filter(function(k){return D.some(function(d){return [1,2].some(function(m){return P().tracks[k].enabled[m+'-'+d]!==false})})});
+ if(!tracks.length){alert('Slå på minst en nivå under Status för att kunna slumpa serier.');cur=null;return}
+ activeTrackId=tracks[Math.floor(Math.random()*tracks.length)];
+ var choices=[];D.forEach(function(d){[1,2].forEach(function(m){if(T().enabled[m+'-'+d]!==false){var c=cell(m,d);choices.push({d:d,m:m,w:Math.max(1,steps(m,d).length-c.i)})}})});
+ var total=choices.reduce(function(a,x){return a+x.w},0),r=Math.random()*total,chosen=choices[choices.length-1];
+ for(var i=0;i<choices.length;i++){r-=choices[i].w;if(r<0){chosen=choices[i];break}}
+ cur={d:chosen.d,m:chosen.m,support:activeTrackId};shots=[];
 }
 function info(){activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);return{st:st,c:c,t:st[c.i][0],r:st[c.i][1],n:cur.m==1?5:6}}
 function done(){var I=info();shots=shots.slice();for(var i=0;i<I.n;i++)if(!shots[i])return false;return true}
@@ -148,7 +152,7 @@ function render(){
  if(tab=='s'){
   activeTrackId=statusSupport;
   h+='<div class="card"><h2>Nivå per avstånd</h2><div class="row"><button class="'+(statusSupport=='support'?'s':'')+'" onclick="statusSupport=\'support\';activeTrackId=statusSupport;render()">Med stödhand</button><button class="'+(statusSupport=='unsupported'?'s':'')+'" onclick="statusSupport=\'unsupported\';activeTrackId=statusSupport;render()">Utan stödhand</button></div><div class="mu">Aktuellt steg · mätare · rekord</div><table><tr><th>yd</th><th>1 skott</th><th>2 skott</th></tr>';
-  D.forEach(function(d){h+='<tr><td><b>'+d+'</b></td>'+[1,2].map(function(m){var c=cell(m,d);return '<td>'+lbl(m,d,c.i)+'<br><span class="mu">'+(c.m>0?'+':'')+c.m+' · rek '+lbl(m,d,c.rec)+'</span></td>'}).join('')+'</tr>'});
+  D.forEach(function(d){h+='<tr><td><b>'+d+'</b></td>'+[1,2].map(function(m){var c=cell(m,d),on=T().enabled[m+'-'+d]!==false;return '<td><div>'+lbl(m,d,c.i)+'</div><span class="mu">'+(c.m>0?'+':'')+c.m+' · rek '+lbl(m,d,c.rec)+'</span><br><button class="level-toggle" onclick="toggleLevel('+m+','+d+')">'+(on?'PÅ':'AV')+'</button></td>'}).join('')+'</tr>'});
   h+='</table></div><div class="card"><h2>Justera steg</h2><div class="mu">Flytta en ruta manuellt.</div>';
   D.forEach(function(d){[1,2].forEach(function(m){h+='<div class="row"><b style="width:70px">'+d+' yd '+m+'sk</b><button onclick="mv('+m+','+d+',-1)">−</button><button style="flex:3" disabled>'+lbl(m,d,cell(m,d).i)+'</button><button onclick="mv('+m+','+d+',1)">+</button></div>'})});
   h+='</div>';
@@ -179,6 +183,7 @@ function del(id){if(S.pistols.length<2){alert('Minst en pistol behövs');return}
 function addp(){var id=Date.now(),p={id:id,name:'Pistol '+(S.pistols.length+1),on:1,cells:{},log:[],tests:[]};ensureTracks(p);S.pistols.push(p);pid=id;preset(1);cur=null;save();render()}
 function shot(i,z){shots[i]=z;render()}
 function mv(m,d,x){activeTrackId=statusSupport;var c=cell(m,d),n=steps(m,d).length;c.i=Math.max(0,Math.min(n-1,c.i+x));c.m=0;c.rec=Math.max(c.rec,c.i);save();render()}
+function toggleLevel(m,d){activeTrackId=statusSupport;var en=T().enabled,key=m+'-'+d;if(en[key]!==false){var p=P(),count=0;['support','unsupported'].forEach(function(k){D.forEach(function(dd){[1,2].forEach(function(mm){if(p.tracks[k].enabled[mm+'-'+dd]!==false)count++})})});if(count<=1){alert('Minst en nivå måste vara påslagen.');return}en[key]=false}else en[key]=true;save();render()}
 function saveTest(){var r=TEST[tsel][1],pts=0,hit=0,x=0;for(var i=0;i<6;i++){var z=shots6[i];if(!z){alert('Ange alla 6 skott');return}pts+=val(z);if(val(z)>=r)hit++;if(z=='X')x++}
  var tm=document.getElementById('tt').value;P().tracks[testSupport].tests.push({t:Date.now(),d:tsel,pts:pts,hit:hit,x:x,time:tm,support:testSupport});save();shots6=[];render()}
 function imp(){try{var o=JSON.parse(document.getElementById('ex').value);if(o&&(o.pistols||o.cells)){if(!o.pistols)o={pistols:[{id:1,name:'Pistol 1',on:1,cells:o.cells,log:o.log||[],tests:o.tests||[]}]};S=o;pid=S.pistols[0].id;save();cur=null;render()}else alert('Ogiltig data')}catch(e){alert('Ogiltig data')}}
