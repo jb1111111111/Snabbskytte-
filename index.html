@@ -184,7 +184,7 @@ function tg(id){S.pistols.forEach(function(p){if(p.id==id)p.on=p.on===0?1:0});sa
 function del(id){if(S.pistols.length<2){alert('Minst en pistol behövs');return}if(!confirm('Ta bort pistolen och all dess data?'))return;S.pistols=S.pistols.filter(function(p){return p.id!=id});pid=S.pistols[0].id;cur=null;save();render()}
 function addp(){var id=Date.now(),p={id:id,name:'Pistol '+(S.pistols.length+1),on:1,cells:{},log:[],tests:[]};ensureTracks(p);S.pistols.push(p);pid=id;preset(1);cur=null;save();render()}
 function shot(i,z){shots[i]=z;render()}
-function mv(m,d,x){activeTrackId=statusSupport;var c=cell(m,d),n=steps(m,d).length;c.i=Math.max(0,Math.min(n-1,c.i+x));c.m=0;c.rec=Math.max(c.rec,c.i);save();render()}
+function mv(m,d,x){activeTrackId=statusSupport;var c=cell(m,d),n=steps(m,d).length;c.i=Math.max(0,Math.min(n-1,c.i+x));c.m=0;save();render()}
 function toggleLevel(m,d){activeTrackId=statusSupport;var en=T().enabled,key=m+'-'+d;if(en[key]!==false){var p=P(),count=0;['support','unsupported'].forEach(function(k){D.forEach(function(dd){[1,2].forEach(function(mm){if(p.tracks[k].enabled[mm+'-'+dd]!==false)count++})})});if(count<=1){alert('Minst en nivå måste vara påslagen.');return}en[key]=false}else en[key]=true;save();render()}
 function saveTest(){var r=TEST[tsel][1],pts=0,hit=0,x=0;for(var i=0;i<6;i++){var z=shots6[i];if(!z){alert('Ange alla 6 skott');return}pts+=val(z);if(val(z)>=r)hit++;if(z=='X')x++}
  var tm=document.getElementById('tt').value;P().tracks[testSupport].tests.push({t:Date.now(),d:tsel,pts:pts,hit:hit,x:x,time:tm,support:testSupport});save();shots6=[];render()}
