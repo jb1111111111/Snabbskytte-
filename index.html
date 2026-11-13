@@ -46,10 +46,13 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
   <button class="btn" onclick="authAction('signup')">Skapa konto</button>
   <div id="authmsg" class="mu" style="margin-top:8px"></div>
 </section>
-<div id="app"><nav id="nav"></nav><div id="v"></div>
-<div class="mu" style="text-align:center;margin:12px 0">
-  <span id="syncstatus">Lokal lagring</span> · <button class="btn" id="accountbtn" onclick="openLogin()">Logga in för molnsynk</button>
-</div></div></main>
+<div id="app">
+<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 8px">
+  <span id="syncstatus" class="mu">Lokal lagring</span>
+  <button class="btn" id="accountbtn" style="margin:0;background:var(--sf);border-color:var(--ac);color:var(--ac);font-weight:700" onclick="openLogin()">LOGGA IN / SKAPA KONTO</button>
+</div>
+<nav id="nav"></nav><div id="v"></div>
+</div></main>
 <script>
 var D=[3,7,15,25,50],Z=['Bom','7','8','9','10','X'],KEY='skytte1';
 var TS={1:{d:[3,2.5,2,1.7,1.5],25:[3,2.5,2.2,2],50:[3,2.5,2,1.7]},2:{d:[4,3.5,3,2.5,2],25:[4,3.5,3],50:[5,4,3.5,3]}};
@@ -191,7 +194,7 @@ function showApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
   var b=document.getElementById('accountbtn');
-  if(b)b.textContent=cloudUser?'Logga ut':'Logga in för molnsynk';
+  if(b)b.textContent=cloudUser?'LOGGA UT':'LOGGA IN / SKAPA KONTO';
 }
 function openLogin(){
   if(cloudUser){logout();return}
