@@ -129,8 +129,7 @@ function render(){
  if(tab=='t'){
   if(!cur)pick();var I=info();
   if(msg)h+=mh(msg);
-  h+='<div class="card" style="border:2px solid var(--ac);background:var(--sf)"><div class="mu">SLUMPMÄSSIGT VALD TRÄNINGSFORM</div><div style="font:700 27px Barlow Condensed,sans-serif;color:var(--ac)">'+(cur.support=='support'?'MED STÖDHAND':'UTAN STÖDHAND')+'</div><div class="mu">Eget träningsspår · separat nivå, rekord och historik</div></div>';
-  h+='<div class="card"><div class="mu">'+esc(P().name)+' · '+(cur.support=='support'?'Med stödhand':'Utan stödhand')+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
+  h+='<div class="card"><div style="font:700 27px Barlow Condensed,sans-serif;color:var(--ac);margin-bottom:6px">'+(cur.support=='support'?'MED STÖDHAND':'UTAN STÖDHAND')+'</div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
   '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(cur.d==50?'7:an':I.r+(I.r<10?'+':''))+'</div>'+
   '<div class="mu" style="margin-top:6px">Steg '+(I.c.i+1)+'/'+I.st.length+' · mätare '+(I.c.m>0?'+':'')+I.c.m+' (upp vid +2) · rekord steg '+(I.c.rec+1)+'</div>'+
   '<div class="mu">Start från 45 grader. Skott utanför tiden anges som Bom.</div></div><div class="card">';
