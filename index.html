@@ -48,7 +48,7 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
 </section>
 <div id="app"><nav id="nav"></nav><div id="v"></div>
 <div class="mu" style="text-align:center;margin:12px 0">
-  <span id="syncstatus">Molnlagring ansluten</span> · <button class="btn" onclick="logout()">Logga ut</button>
+  <span id="syncstatus">Lokal lagring</span> · <button class="btn" id="accountbtn" onclick="openLogin()">Logga in för molnsynk</button>
 </div></div></main>
 <script>
 var D=[3,7,15,25,50],Z=['Bom','7','8','9','10','X'],KEY='skytte1';
@@ -190,6 +190,14 @@ function showAuth(message){
 function showApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
+  var b=document.getElementById('accountbtn');
+  if(b)b.textContent=cloudUser?'Logga ut':'Logga in för molnsynk';
+}
+function openLogin(){
+  if(cloudUser){logout();return}
+  document.getElementById('auth').style.display='block';
+  document.getElementById('authmsg').textContent='Logga in för att aktivera molnsynk. Du kan också fortsätta utan konto.';
+  window.scrollTo(0,0);
 }
 async function authAction(mode){
   var email=document.getElementById('email').value.trim();
@@ -241,8 +249,8 @@ async function startCloud(user){
 }
 async function logout(){
   cloudReady=false;cloudUser=null;
-  await window.sb.auth.signOut();
-  showAuth('Du är utloggad.');
+  if(window.sb)await window.sb.auth.signOut();
+  showApp();setSync('Lokal lagring – molnsynk av');
 }
 (function initCloud(){
   if(SUPABASE_URL.indexOf('https://')!==0 || SUPABASE_ANON_KEY.indexOf('KLIStra_')===0){
@@ -252,10 +260,10 @@ async function logout(){
   window.sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   window.sb.auth.getSession().then(function(r){
     if(r.data.session)startCloud(r.data.session.user);
-    else showAuth('Logga in eller skapa ett konto.');
-  }).catch(function(e){showAuth(e.message)});
+    else {showApp();setSync('Lokal lagring – logga in endast om du vill ha molnsynk');}
+  }).catch(function(e){showApp();setSync('Lokal lagring – molntjänsten kunde inte nås');});
   window.sb.auth.onAuthStateChange(function(event,session){
-    if(event==='SIGNED_OUT'){cloudReady=false;cloudUser=null;showAuth('Du är utloggad.')}
+    if(event==='SIGNED_OUT'){cloudReady=false;cloudUser=null;showApp();setSync('Lokal lagring – molnsynk av')}
   });
 })();
 </script></body></html>
