@@ -35,7 +35,7 @@ select,input,textarea{font:16px Barlow,sans-serif;padding:9px;border:1px solid v
 .msg{padding:8px 10px;border-left:4px solid var(--ac);background:var(--bg);margin-bottom:10px;border-radius:4px}
 h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
 </style></head><body><main>
-<section id="auth" class="card" style="display:none">
+<section id="auth" class="card">
   <h2>Logga in till Snabbskytte</h2>
   <p class="mu">Dina träningsresultat sparas på ditt privata konto och kan användas på flera enheter.</p>
   <label for="email">E-post</label>
@@ -44,7 +44,8 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
   <input id="password" type="password" autocomplete="current-password" placeholder="Minst 8 tecken">
   <button class="go" onclick="authAction('login')">Logga in</button>
   <button class="btn" onclick="authAction('signup')">Skapa konto</button>
-  <div id="authmsg" class="mu" style="margin-top:8px"></div>
+  <button class="btn" style="margin-top:8px" onclick="continueOffline()">Fortsätt utan konto</button>
+  <div id="authmsg" class="mu" style="margin-top:8px">Logga in för molnsynk, eller fortsätt utan konto.</div>
 </section>
 <div id="app">
 <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 8px">
@@ -202,6 +203,11 @@ function openLogin(){
   document.getElementById('authmsg').textContent='Logga in för att aktivera molnsynk. Du kan också fortsätta utan konto.';
   window.scrollTo(0,0);
 }
+function continueOffline(){
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='block';
+  setSync('Lokal lagring – utan konto');
+}
 async function authAction(mode){
   var email=document.getElementById('email').value.trim();
   var password=document.getElementById('password').value;
@@ -256,23 +262,25 @@ async function logout(){
   showApp();setSync('Lokal lagring – molnsynk av');
 }
 (function initCloud(){
-  // Träningsläget ska alltid vara tillgängligt utan konto.
-  showApp();
-  setSync('Lokal lagring – träningen fungerar utan inloggning');
+  // Visa alltid inloggningsformuläret och träningsappen. Användaren väljer själv.
+  document.getElementById('auth').style.display='block';
+  document.getElementById('app').style.display='block';
+  setSync('Lokal lagring – välj inloggning eller fortsätt utan konto');
   try{
     if(!window.supabase || SUPABASE_URL.indexOf('https://')!==0 || SUPABASE_ANON_KEY.indexOf('KLIStra_')===0){
+      document.getElementById('authmsg').textContent='Molnsynk är inte konfigurerad. Du kan fortsätta utan konto.';
       return;
     }
     window.sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
     window.sb.auth.getSession().then(function(r){
       if(r.data.session)startCloud(r.data.session.user);
-      else {showApp();setSync('Lokal lagring – logga in endast om du vill ha molnsynk');}
-    }).catch(function(e){showApp();setSync('Lokal lagring – molntjänsten kunde inte nås');});
+      else {document.getElementById('authmsg').textContent='Logga in eller skapa konto för molnsynk. Du kan också fortsätta utan konto.';}
+    }).catch(function(e){document.getElementById('authmsg').textContent='Molnsynk kunde inte ansluta. Du kan fortsätta utan konto.';});
     window.sb.auth.onAuthStateChange(function(event,session){
       if(event==='SIGNED_OUT'){cloudReady=false;cloudUser=null;showApp();setSync('Lokal lagring – molnsynk av')}
     });
   }catch(e){
-    showApp();
+    document.getElementById('authmsg').textContent='Molnsynk otillgänglig. Du kan fortsätta utan konto.';
     setSync('Lokal lagring – molnsynk otillgänglig');
     console.warn('Molnsynk kunde inte startas:',e);
   }
