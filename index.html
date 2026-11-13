@@ -92,8 +92,8 @@ function val(z){return z=='Bom'?0:z=='X'?10:+z}
 function pick(keep){
  if(!keep){var pool=S.pistols.filter(function(p){return p.on!==0});if(!pool.length)pool=S.pistols;
   var pw=pool.map(function(p){pid=p.id;activeTrackId='support';return D.reduce(function(a,d){return a+[1,2].reduce(function(b,m){return b+steps(m,d).length-cell(m,d).i},0)},0)});
-  var r0=Math.random()*pw.reduce(function(a,b){return a+b},0),j=0;while(j<pool.length-1&&r0>pw[j]){r0-=pw[j];j++}pid=pool[j].id;
-  activeTrackId=Math.random()<.5?'support':'unsupported'}
+  var r0=Math.random()*pw.reduce(function(a,b){return a+b},0),j=0;while(j<pool.length-1&&r0>pw[j]){r0-=pw[j];j++}pid=pool[j].id}
+ activeTrackId=Math.random()<.5?'support':'unsupported';
  var w=D.map(function(d){return [1,2].reduce(function(a,m){return a+steps(m,d).length-cell(m,d).i},0)});
  for(var k=0;k<6;k++){var t=w.reduce(function(a,b){return a+b},0);w=w.map(function(x){return Math.min(x/t,.3)});var s=w.reduce(function(a,b){return a+b},0);w=w.map(function(x){return x/s})}
  var r=Math.random(),i=0;while(i<4&&r>w[i]){r-=w[i];i++}
@@ -129,6 +129,7 @@ function render(){
  if(tab=='t'){
   if(!cur)pick();var I=info();
   if(msg)h+=mh(msg);
+  h+='<div class="card" style="border:2px solid var(--ac);background:var(--sf)"><div class="mu">SLUMPMÄSSIGT VALD TRÄNINGSFORM</div><div style="font:700 27px Barlow Condensed,sans-serif;color:var(--ac)">'+(cur.support=='support'?'MED STÖDHAND':'UTAN STÖDHAND')+'</div><div class="mu">Eget träningsspår · separat nivå, rekord och historik</div></div>';
   h+='<div class="card"><div class="mu">'+esc(P().name)+' · '+(cur.support=='support'?'Med stödhand':'Utan stödhand')+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
   '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(cur.d==50?'7:an':I.r+(I.r<10?'+':''))+'</div>'+
   '<div class="mu" style="margin-top:6px">Steg '+(I.c.i+1)+'/'+I.st.length+' · mätare '+(I.c.m>0?'+':'')+I.c.m+' (upp vid +2) · rekord steg '+(I.c.rec+1)+'</div>'+
