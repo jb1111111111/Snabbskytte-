@@ -59,7 +59,7 @@ var D=[3,7,15,25,50],Z=['Bom','7','8','9','10','X'],KEY='skytte1';
 var TS={1:{d:[3,2.5,2,1.7,1.5],25:[3,2.5,2.2,2],50:[3,2.5,2,1.7]},2:{d:[4,3.5,3,2.5,2],25:[4,3.5,3],50:[5,4,3.5,3]}};
 var TEST={3:[6,9],7:[6,9],15:[8,9],25:[10,8],50:[12,7]};
 var MAXR={25:9,50:7};
-var tab='t',cur=null,shots=[],msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support';
+var tab='h',cur=null,shots=[],msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support';
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
 function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};if(!p.tracks[k].cells)p.tracks[k].cells={};if(!p.tracks[k].log)p.tracks[k].log=[];if(!p.tracks[k].tests)p.tracks[k].tests=[]})}
 S.pistols.forEach(ensureTracks);
@@ -129,7 +129,10 @@ function submit(){
 function lbl(m,d,i){var st=steps(m,d),s=st[i];return s[0]+' s, ≥'+s[1]}
 function render(){
  var h='';
- h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+S.pistols.map(function(p){return '<button class="btn" style="'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button>'}).join('')+'</div>';
+ if(tab!='h')h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+S.pistols.map(function(p){return '<button class="btn" style="'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button>'}).join('')+'</div>';
+ if(tab=='h'){
+  h+='<div class="card" style="padding:20px 16px"><div style="font:700 42px/1 Barlow Condensed,sans-serif;color:var(--ac);margin-bottom:8px">SNABBSKYTTE</div><div style="font:700 25px/1.1 Barlow Condensed,sans-serif;margin-bottom:12px">Träna smartare. Skjut snabbare. Träffa bättre.</div><p>Snabbskytte är ett träningsverktyg för dig som vill utveckla snabbhet, precision och jämnhet i pistolskyttet – med särskilt fokus på milsnabb och fältskytte.</p><p>Övningarna simulerar olika skjutmoment genom att variera:</p><ul style="padding-left:21px"><li><b>Avstånd</b> – träna på mål på olika avstånd.</li><li><b>Tid</b> – utmana dig att genomföra momenten snabbare.</li><li><b>Målstorlek och träffkrav</b> – träna precision mot olika stora träffytor och krav.</li></ul><p>Målet är att skjuta snabbare utan att tappa kontroll eller precision. Genom återkommande serier, tester och uppföljning kan du följa utvecklingen och se vad du behöver träna mer på.</p><p>Du kan träna både <b>med stödhand och utan stödhand</b>, med separat progression och historik för respektive träningssätt.</p><button class="go" onclick="tab=\'t\';cur=null;msg=\'\';render()">BÖRJA TRÄNA</button></div><div class="card"><h2>Så använder du appen</h2><p><b>Träna</b> – genomför slumpade serier och registrera dina träffar.</p><p><b>Status</b> – följ nivåer, mätare och personliga rekord.</p><p><b>Test</b> – gör ett fristående 6-skottstest och följ resultaten över tid.</p><p><b>Data</b> – hantera pistoler och säkerhetskopiera dina resultat.</p></div>';
+ }
  if(tab=='t'){
   if(!cur)pick();var I=info();
   if(msg)h+=mh(msg);
@@ -163,7 +166,7 @@ function render(){
   '<div class="card"><button class="btn" style="color:var(--bad)" onclick="if(confirm(\'Radera allt?\')){S={pistols:[{id:1,name:\'Pistol 1\',on:1,cells:{},log:[],tests:[]}]};pid=1;preset(1);cur=null;render()}">Radera all data</button></div>';
  }
  document.getElementById('v').innerHTML=h;
- document.getElementById('nav').innerHTML=[['t','Träna'],['s','Status'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('')}
+ document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('')}
 var tsel=50,shots6=[];
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function sg(n){return (n>0?'+':n<0?'−':'')+Math.abs(n)}
@@ -263,9 +266,9 @@ async function logout(){
 }
 (function initCloud(){
   // Visa alltid inloggningsformuläret och träningsappen. Användaren väljer själv.
-  document.getElementById('auth').style.display='block';
+  document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='block';
-  setSync('Lokal lagring – välj inloggning eller fortsätt utan konto');
+  setSync('Lokal lagring – du kan logga in för molnsynk');
   try{
     if(!window.supabase || SUPABASE_URL.indexOf('https://')!==0 || SUPABASE_ANON_KEY.indexOf('KLIStra_')===0){
       document.getElementById('authmsg').textContent='Molnsynk är inte konfigurerad. Du kan fortsätta utan konto.';
