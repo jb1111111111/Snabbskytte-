@@ -129,13 +129,12 @@ function render(){
  if(tab=='t'){
   if(!cur)pick();var I=info();
   if(msg)h+=mh(msg);
-  h+='<div class="card"><div style="display:flex;align-items:baseline;gap:7px;color:var(--ac);margin-bottom:7px;line-height:1"><span style="font:700 38px/1 Barlow Condensed,sans-serif">'+(cur.support=='support'?'MED':'UTAN')+'</span><span style="font:600 16px/1.2 Barlow Condensed,sans-serif;letter-spacing:1px">STÖDHAND</span></div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
+  h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px"><div style="display:flex;align-items:baseline;gap:7px;color:var(--ac);line-height:1"><span style="font:700 38px/1 Barlow Condensed,sans-serif">'+(cur.support=='support'?'MED':'UTAN')+'</span><span style="font:600 16px/1.2 Barlow Condensed,sans-serif;letter-spacing:1px">STÖDHAND</span></div><button class="btn" style="margin:0;white-space:nowrap;font-size:14px;padding:8px 10px" onclick="pick();msg='';render()">Slumpa serie</button></div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
   '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(cur.d==50?'7:an':I.r+(I.r<10?'+':''))+'</div>'+
   '<div class="mu" style="margin-top:6px">Steg '+(I.c.i+1)+'/'+I.st.length+' · mätare '+(I.c.m>0?'+':'')+I.c.m+' (upp vid +2) · rekord steg '+(I.c.rec+1)+'</div>'+
   '<div class="mu">Start från 45 grader. Skott utanför tiden anges som Bom.</div></div><div class="card">';
   for(var i=0;i<I.n;i++){h+='<div class="row"><b>'+(i+1)+'</b>'+Z.map(function(z){return '<button class="'+(shots[i]==z?'s'+(z=='Bom'?' bom':''):'')+'" onclick="shot('+i+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>'}
-  h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button>'+
-  '<button class="btn" style="margin-top:10px" onclick="pick();msg=\'\';render()">Slumpa pistol och serie</button></div>';
+  h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
   var L=T().log.slice(-6).reverse();
   if(L.length){h+='<div class="card"><h2>Senaste serier</h2><table>'+L.map(function(e){return '<tr><td>'+e.d+' yd · '+e.m+'sk</td><td>'+e.shots.join(' ')+'</td><td class="r">'+e.pts+'p</td></tr>'}).join('')+'</table></div>'}
  }
