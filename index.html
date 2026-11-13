@@ -58,12 +58,13 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
 </div></main>
 <script>
 var D=[3,7,15,25,50],Z=['Bom','7','8','9','10','X'],KEY='skytte1';
-var TS={1:{d:[3,2.5,2,1.7,1.5],25:[3,2.5,2.2,2],50:[3,2.5,2,1.7]},2:{d:[4,3.5,3,2.5,2],25:[4,3.5,3],50:[5,4,3.5,3]}};
+var PROFILES={latt:[3,3,3,3.5,4],medel:[2,2,2,2.5,3],svar:[1.5,1.5,1.5,2,2.5]};
+var RINGS={3:[8,9,10],7:[8,9,10],15:[7,8,9],25:[7,8,9],50:[5,6,7]};
 var TEST={3:[6,9],7:[6,9],15:[8,9],25:[10,8],50:[12,7]};
-var MAXR={25:9,50:7};
-var tab='h',cur=null,shots=[],msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support';
+var tab='h',cur=null,shots=[],msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1;
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
-function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};if(!p.tracks[k].cells)p.tracks[k].cells={};if(!p.tracks[k].log)p.tracks[k].log=[];if(!p.tracks[k].tests)p.tracks[k].tests=[];if(!p.tracks[k].enabled)p.tracks[k].enabled={};D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(p.tracks[k].enabled[key]===undefined)p.tracks[k].enabled[key]=true})})})}
+function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};var tr=p.tracks[k];if(!tr.cells)tr.cells={};if(!tr.log)tr.log=[];if(!tr.tests)tr.tests=[];if(!tr.enabled)tr.enabled={};if(!tr.timeSettings)tr.timeSettings={};[1,2].forEach(function(m){if(!tr.timeSettings[m])tr.timeSettings[m]={preset:'medel',adjust:{}};if(!tr.timeSettings[m].adjust)tr.timeSettings[m].adjust={}});D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(tr.enabled[key]===undefined)tr.enabled[key]=true})})})}
+if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
 S.pistols.forEach(ensureTracks);
 var cloudUser=null, cloudReady=false, cloudSaving=false;
 function setSync(t){var el=document.getElementById('syncstatus');if(el)el.textContent=t}
@@ -87,12 +88,15 @@ function save(){
     },350);
   }
 }
-function steps(m,d){var ts=TS[m][d]||TS[m].d,mx=MAXR[d]||10,s=[];ts.forEach(function(t){for(var r=7;r<=mx;r++)s.push([t,r])});return s}
+function baseTime(m,d){var q=T().timeSettings[m],a=PROFILES[q.preset]||PROFILES.medel,idx=D.indexOf(d);return Math.max(0.5,a[idx]+(Number(q.adjust[d])||0))}
+function steps(m,d){var r=RINGS[d],t=baseTime(m,d);return r.map(function(v,i){return [Math.max(0.5,+(t-i*0.5).toFixed(1)),v]})}
+function setTimePreset(m,p){T().timeSettings[m].preset=p;save();render()}
+function setTimeAdjust(m,d,delta){var q=T().timeSettings[m];q.adjust[d]=+((Number(q.adjust[d])||0)+delta).toFixed(1);save();render()}
 var pid=S.pistols[0].id;
 function P(){for(var i=0;i<S.pistols.length;i++)if(S.pistols[i].id==pid)return S.pistols[i];pid=S.pistols[0].id;return S.pistols[0]}
 function T(){ensureTracks(P());return P().tracks[activeTrackId]}
 function cell(m,d){var C=T().cells,k=m+'-'+d;if(!C[k])C[k]={i:0,m:0,rec:0};return C[k]}
-function preset(p){var old=activeTrackId;['support','unsupported'].forEach(function(k){activeTrackId=k;D.forEach(function(d){[1,2].forEach(function(m){var st=steps(m,d),mx=MAXR[d]||10,nr=mx-6,ti=p,rq=p;if(d>=25)ti=Math.max(0,p-1);var i=Math.min(st.length-1,ti*nr+Math.min(rq,nr-1));var c=cell(m,d);c.i=i;c.m=0;c.rec=Math.max(c.rec,0)})})});activeTrackId=old;save()}
+function preset(p){var key=['latt','medel','svar'][p]||'medel',old=activeTrackId;['support','unsupported'].forEach(function(k){activeTrackId=k;[1,2].forEach(function(m){T().timeSettings[m].preset=key})});activeTrackId=old;save()}
 S.pistols.forEach(function(p){if(!Object.keys(p.cells).length){pid=p.id;preset(1)}});pid=S.pistols[0].id;
 function val(z){return z=='Bom'?0:z=='X'?10:+z}
 function pick(keep){
@@ -103,7 +107,8 @@ function pick(keep){
  var tracks=['support','unsupported'].filter(function(k){return D.some(function(d){return [1,2].some(function(m){return P().tracks[k].enabled[m+'-'+d]!==false})})});
  if(!tracks.length){alert('Slå på minst en nivå under Status för att kunna slumpa serier.');cur=null;return}
  activeTrackId=tracks[Math.floor(Math.random()*tracks.length)];
- var choices=[];D.forEach(function(d){[1,2].forEach(function(m){if(T().enabled[m+'-'+d]!==false){var c=cell(m,d);choices.push({d:d,m:m,w:Math.max(1,steps(m,d).length-c.i)})}})});
+ var choices=[];D.forEach(function(d){[1,2].forEach(function(m){if(T().enabled[m+'-'+d]!==false){var c=cell(m,d),remaining=steps(m,d).length-c.i;if(remaining>0)choices.push({d:d,m:m,w:remaining})}})});
+ if(!choices.length){alert('Alla aktiva träningsprogram är färdiga.');cur=null;return;}
  var total=choices.reduce(function(a,x){return a+x.w},0),r=Math.random()*total,chosen=choices[choices.length-1];
  for(var i=0;i<choices.length;i++){r-=choices[i].w;if(r<0){chosen=choices[i];break}}
  cur={d:chosen.d,m:chosen.m,support:activeTrackId};shots=[];
@@ -113,25 +118,14 @@ function done(){var I=info();shots=shots.slice();for(var i=0;i<I.n;i++)if(!shots
 function submit(){
  var I=info(),c=I.c,miss=0,pts=0,x=0;
  shots.forEach(function(z){if(val(z)<I.r)miss++;pts+=val(z);if(z=='X')x++});
- var dl=miss==0?1:miss==1?0:-1,note='',oi=c.i,orec=c.rec,same=T().log.filter(function(e){return e.d==cur.d&&e.m==cur.m}),first=!T().log.length,st5=0;for(var q=same.length-1;q>=0&&same[q].miss==0;q--)st5++;var low=(I.n-miss)/I.n<.7&&same.length>=2&&same.slice(-2).every(function(e){return (I.n-e.miss)/I.n<.7});
- c.m+=dl;
- if(c.m>=2){if(c.i<I.st.length-1){c.i++;note='up'}else note='top';c.m=0}
- else if(c.m<=-2){if(c.i>0){c.i--;c.m=1;note='down'}else c.m=0}
- c.rec=Math.max(c.rec,c.i);
- T().log.push({t:Date.now(),d:cur.d,m:cur.m,tm:I.t,r:I.r,shots:shots,miss:miss,pts:pts,x:x,support:cur.support});
- save();var pn=esc(P().name),trackName=cur.support=='support'?'Med stödhand':'Utan stödhand',ns=I.st[c.i],nl=ns[0]+' s, krav '+(cur.d==50?'7:an':ns[1]+'+'),M,xs=[];
- if(note=='up'){M=c.i>orec?['good','Nytt rekord!','Grattis, utmärkt skjutet. Du är nu på din högsta nivå hittills: '+nl+'.']:['good','Du avancerar!','Bra jobbat, två rena serier. Nu '+nl+'.'];M[2]+=ns[0]!=I.st[oi][0]?' Kravet går tillbaka till 7:an, så du tränar farten först.':' Samma tid, högre krav.'}
- else if(note=='top')M=['good','Toppen klarad!','Mycket bra. Du har klarat högsta nivån på '+cur.d+' yd, '+cur.m+' skott med '+pn+'. Avståndet dyker nu upp som underhåll.'];
- else if(note=='down')M=['bad','Ner ett steg.','Nu '+nl+'. Du landar på +1, och en ren serie tar dig tillbaka.'];
- else if(dl==1)M=['good','Ren serie!','Bra skjutet, +1. En till så går du upp.'];
- else if(dl==0)M=['mid','Ett miss.','Mätaren står kvar på '+sg(c.m)+'.'];
- else M=['mid','Två eller fler miss.','Mätaren '+sg(c.m)+'. Ner vid −2.'];
- if(miss==0&&shots.every(function(z){return z=='X'}))xs.push('Hela serien i innertian.');
- if(miss==0&&(st5+1)%5==0)xs.push('Fem rena serier i rad på rutan. Det här sitter.');
- if(first)xs.push('Första serien med '+pn+' är loggad.');
- if(low)xs.push('Tre serier i rad under 70 %. Överväg att sänka ett steg under Status.');
- msg={c:M[0],t:M[1],l:M[2],x:xs,m:c.m,s:pn+' · '+trackName+' · '+cur.d+' yd, '+cur.m+' skott: '+(I.n-miss)+'/'+I.n+' inom kravet, '+x+' X, '+pts+' poäng'};pick();render()}
-function lbl(m,d,i){var st=steps(m,d),s=st[i];return s[0]+' s, ≥'+s[1]}
+ var passed=miss===0,first=!T().log.length;
+ if(passed){c.i=Math.min(I.st.length,c.i+1);c.rec=Math.max(c.rec,c.i)}
+ T().log.push({t:Date.now(),d:cur.d,m:cur.m,tm:I.t,r:I.r,shots:shots.slice(),miss:miss,pts:pts,x:x,support:cur.support,passed:passed});
+ save();var pn=esc(P().name),trackName=cur.support=='support'?'Med stödhand':'Utan stödhand';
+ var note=passed?(c.i>=I.st.length?'Alla tre precisionsnivåer klara på avståndet!':'Godkänd serie – du går vidare till nästa nivå.'):'Inte godkänd. Alla skott måste träffa kravet eller bättre.';
+ msg={c:passed?'good':'mid',t:passed?'Godkänd serie!':'Serien inte godkänd',l:note,x:[],m:0,s:pn+' · '+trackName+' · '+cur.d+' yd · '+(cur.m==1?'1 skott':'2 skott')+': '+(I.n-miss)+'/'+I.n+' inom kravet, '+x+' X, '+pts+' poäng'};
+ pick();render()}
+function lbl(m,d,i){var st=steps(m,d),s=st[Math.max(0,Math.min(st.length-1,i))];return s[0]+' s, ≥'+s[1]}
 function render(){
  var h='';
  if(tab!='h'&&tab!='s')h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+S.pistols.map(function(p){return '<button class="btn" style="'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button>'}).join('')+'</div>';
@@ -143,7 +137,7 @@ function render(){
   if(msg)h+=mh(msg);
   h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px"><div style="display:flex;align-items:baseline;gap:7px;color:var(--ac);line-height:1"><span style="font:700 38px/1 Barlow Condensed,sans-serif">'+(cur.support=='support'?'MED':'UTAN')+'</span><span style="font:600 16px/1.2 Barlow Condensed,sans-serif;letter-spacing:1px">STÖDHAND</span></div><button class="btn" style="margin:0;white-space:nowrap;font-size:14px;padding:8px 10px" onclick="pick();msg=\'\';render()">Slumpa serie</button></div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
   '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(cur.d==50?'7:an':I.r+(I.r<10?'+':''))+'</div>'+
-  '<div class="mu" style="margin-top:6px">Steg '+(I.c.i+1)+'/'+I.st.length+' · mätare '+(I.c.m>0?'+':'')+I.c.m+' (upp vid +2) · rekord steg '+(I.c.rec+1)+'</div>'+
+  '<div class="mu" style="margin-top:6px">Precisionsnivå '+Math.min(I.c.i+1,3)+'/3 · steg '+(I.c.i+1)+'/3 · rekord steg '+(I.c.rec+1)+'</div>'+
   '<div class="mu">Start från 45 grader. Skott utanför tiden anges som Bom.</div></div><div class="card">';
   for(var i=0;i<I.n;i++){h+='<div class="row"><b>'+(i+1)+'</b>'+Z.map(function(z){return '<button class="'+(shots[i]==z?'s'+(z=='Bom'?' bom':''):'')+'" onclick="shot('+i+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>'}
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
@@ -155,7 +149,7 @@ function render(){
   h+='<div class="card"><h2>Pistoler</h2><div style="display:flex;flex-wrap:wrap;gap:9px 12px">'+S.pistols.map(function(p){return '<div style="display:flex;flex-direction:column;align-items:center;min-width:72px"><button class="btn" style="margin:0;width:100%;'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button><button class="pistol-toggle '+(p.on===0?'off':'')+'" onclick="tg('+p.id+')">'+(p.on===0?'AV':'PÅ')+'</button></div>'}).join('')+'</div></div>';
   h+='<div class="card"><h2>Nivå per avstånd</h2><div class="row"><button class="'+(statusSupport=='support'?'s':'')+'" onclick="statusSupport=\'support\';activeTrackId=statusSupport;render()">Med stödhand</button><button class="'+(statusSupport=='unsupported'?'s':'')+'" onclick="statusSupport=\'unsupported\';activeTrackId=statusSupport;render()">Utan stödhand</button></div><div class="mu">Aktuellt steg · mätare · rekord</div><table><tr><th>yd</th><th>1 skott</th><th>2 skott</th></tr>';
   D.forEach(function(d){h+='<tr><td><b>'+d+'</b></td>'+[1,2].map(function(m){var c=cell(m,d),on=T().enabled[m+'-'+d]!==false;return '<td><div>'+lbl(m,d,c.i)+'</div><span class="mu">'+(c.m>0?'+':'')+c.m+' · rek '+lbl(m,d,c.rec)+'</span><br><button class="level-toggle '+(on?'':'off')+'" onclick="toggleLevel('+m+','+d+')">'+(on?'PÅ':'AV')+'</button></td>'}).join('')+'</tr>'});
-  h+='</table></div><div class="card"><h2>Justera steg</h2><div class="mu">Flytta en ruta manuellt.</div>';
+  h+='</table></div><div class="card"><h2>Tidsinställningar</h2><div class="mu">Välj profil separat för enskott och tvåskott. Nivå 2 är 0,5 s snabbare och nivå 3 ytterligare 0,5 s snabbare.</div><div class="row"><button class="'+(timeMode==1?'s':'')+'" onclick="timeMode=1;render()">1 skott</button><button class="'+(timeMode==2?'s':'')+'" onclick="timeMode=2;render()">2 skott</button></div><select onchange="setTimePreset(timeMode,this.value)"><option value="latt" '+(T().timeSettings[timeMode].preset=='latt'?'selected':'')+'>Lätt</option><option value="medel" '+(T().timeSettings[timeMode].preset=='medel'?'selected':'')+'>Medel</option><option value="svar" '+(T().timeSettings[timeMode].preset=='svar'?'selected':'')+'>Svår</option></select><table><tr><th>Avstånd</th><th>Grundtid</th><th>Justera</th></tr>'+D.map(function(d){return '<tr><td>'+d+' yd</td><td>'+baseTime(timeMode,d).toFixed(1)+' s</td><td><button class="btn" onclick="setTimeAdjust('+timeMode+','+d+',-0.5)">−</button><button class="btn" onclick="setTimeAdjust('+timeMode+','+d+',0.5)">+</button></td></tr>'}).join('')+'</table><div class="mu">Justeringen gäller grundtiden. Nivå 2 och 3 får automatiskt kortare tid.</div></div><div class="card"><h2>Justera steg</h2><div class="mu">Flytta en nivå manuellt.</div>';
   D.forEach(function(d){[1,2].forEach(function(m){h+='<div class="row"><b style="width:70px">'+d+' yd '+m+'sk</b><button onclick="mv('+m+','+d+',-1)">−</button><button style="flex:3" disabled>'+lbl(m,d,cell(m,d).i)+'</button><button onclick="mv('+m+','+d+',1)">+</button></div>'})});
   h+='</div>';
  }
@@ -166,7 +160,7 @@ function render(){
   if(P().tracks[testSupport].tests.length)h+='<div class="card"><h2>Testhistorik · '+(testSupport=='support'?'Med stödhand':'Utan stödhand')+'</h2><table><tr><th>Datum</th><th>yd</th><th>Poäng</th><th>Träff</th><th>X</th><th>Tid</th></tr>'+P().tracks[testSupport].tests.slice().reverse().map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+e.d+'</td><td>'+e.pts+'/60</td><td>'+e.hit+'/6</td><td>'+e.x+'</td><td>'+(e.time||'–')+'</td></tr>'}).join('')+'</table></div>';
  }
  if(tab=='d'){
-  h+='<div class="card"><h2>Förval</h2><div class="mu">Sätter startsteg för vald pistol (välj överst). Nollställer mätare.</div><button class="btn" onclick="if(confirm(\'Sätta Mjuk start?\')){preset(0);render()}">Mjuk</button><button class="btn" onclick="if(confirm(\'Sätta Medel?\')){preset(1);render()}">Medel</button><button class="btn" onclick="if(confirm(\'Sätta Din nivå?\')){preset(2);render()}">Din nivå</button></div>'+
+  h+='<div class="card"><h2>Förval</h2><div class="mu">Sätter startsteg för vald pistol (välj överst). Nollställer mätare.</div><button class="btn" onclick="if(confirm(\'Välja tidsprofil Lätt?\')){preset(0);render()}">Lätt</button><button class="btn" onclick="if(confirm(\'Välja tidsprofil Medel?\')){preset(1);render()}">Medel</button><button class="btn" onclick="if(confirm(\'Välja tidsprofil Svår?\')){preset(2);render()}">Svår</button></div>'+
   '<div class="card"><h2>Backup</h2><button class="btn" onclick="document.getElementById(\'ex\').value=JSON.stringify(S)">Visa data</button><button class="btn" onclick="imp()">Importera</button><textarea id="ex" rows="6" placeholder="Kopiera data hit, eller klistra in för import"></textarea></div>'+
   '<div class="card"><h2>Pistoler</h2><div class="mu">Byt namn eller ta bort pistoler. PÅ/AV för slumpning ställs in under Status.</div>'+S.pistols.map(function(p){return '<div class="row"><input value="'+esc(p.name)+'" onchange="ren('+p.id+',this.value)"><button style="flex:0 0 44px;color:var(--bad)" onclick="del('+p.id+')">✕</button></div>'}).join('')+'<button class="btn" onclick="addp()">Lägg till pistol</button></div>'+
   '<div class="card"><button class="btn" style="color:var(--bad)" onclick="if(confirm(\'Radera allt?\')){S={pistols:[{id:1,name:\'Pistol 1\',on:1,cells:{},log:[],tests:[]}]};pid=1;preset(1);cur=null;render()}">Radera all data</button></div>';
