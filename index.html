@@ -249,6 +249,7 @@ async function startCloud(user){
       );
       if(w.error)throw w.error;
     }
+    if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
     S.pistols.forEach(ensureTracks);
     pid=S.pistols[0].id;
     cur=null;msg='';
