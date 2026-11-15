@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
   try {
     const authResponse = await fetch(supabaseUrl + "/auth/v1/user", {
       headers: { "apikey": supabaseAnonKey, "Authorization": authorization },
+      signal: AbortSignal.timeout(8000),
     });
     if (!authResponse.ok) return json({ error: "Din inloggning kunde inte verifieras. Logga in igen." }, 401);
     const user = await authResponse.json();
@@ -48,55 +49,65 @@ Deno.serve(async (req) => {
 
     const prompt = [
       "Du är en saklig och uppmuntrande träningsanalytiker för sportskytte med pistol.",
-      "Analysera endast den bifogade träningsstatistiken. Svara på svenska och var konkret.",
-      "Ge: 1) kort nulägesbild, 2) två tydliga styrkor eller positiva tecken, 3) högst två utvecklingsområden som faktiskt stöds av siffrorna, 4) ett enkelt förslag på vad skytten kan följa upp i nästa träningspass.",
-      "Jämför bara grupper när det finns tillräckligt med data. Påpeka när underlaget är litet och dra inte långtgående slutsatser.",
+      "Analysera endast träningsstatistiken. Svara på svenska och var konkret.",
+      "Ge en kort nulägesbild, två styrkor, högst två utvecklingsområden och ett enkelt förslag till nästa träningspass.",
+      "Jämför bara grupper när det finns tillräckligt med data. Påpeka om underlaget är litet. Hitta inte på siffror.",
       "Föreslå säkra, kontrollerade övningar med fokus på precision, konsekvens och tidshantering. Ge inga taktiska råd eller råd om att använda vapen mot människor.",
-      "Hitta inte på siffror och säg tydligt till om statistiken inte räcker.",
       "Träningsdata (JSON):",
       statsText,
     ].join("\n\n");
 
-    // Prova flera stabila Flash-modeller om en modell tillfälligt är överbelastad.
-    const models = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+    // Börja med Googles snabba Flash-Lite-modell. Gå vidare om den är upptagen
+    // eller långsam; varje modell får bara ett kort försök för att undvika timeout i Supabase.
+    const models = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
     let result: any = null;
     let lastStatus = 0;
+    let timedOut = false;
+
     for (const model of models) {
-      let response: Response | null = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        response = await fetch(
+      try {
+        const response = await fetch(
           "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey),
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.35, maxOutputTokens: 750 },
+              generationConfig: { temperature: 0.25, maxOutputTokens: 500 },
             }),
-            signal: AbortSignal.timeout(25000),
+            signal: AbortSignal.timeout(18000),
           },
         );
-        if (response.ok) break;
+
+        if (response.ok) {
+          result = await response.json();
+          console.log("Gemini analysis completed with", model);
+          break;
+        }
+
         lastStatus = response.status;
         const errorBody = await response.json().catch(() => ({}));
         console.error("Gemini model error", model, response.status, errorBody?.error?.message || "unknown");
-        if (response.status !== 503 && response.status !== 500) break;
-        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 900));
-      }
-      if (response?.ok) {
-        result = await response.json();
-        break;
-      }
-      if (lastStatus === 429) {
-        return json({ error: "Googles kostnadsfria användningsgräns är nådd. Försök igen senare." }, 429);
+
+        if (response.status === 429) {
+          return json({ error: "Googles kostnadsfria användningsgräns är nådd. Försök igen senare." }, 429);
+        }
+        // Försök nästa modell vid tillfällig överbelastning eller serverfel.
+        if (response.status !== 503 && response.status !== 500 && response.status !== 502) break;
+      } catch (modelError) {
+        timedOut = modelError instanceof Error && modelError.name === "TimeoutError";
+        console.error("Gemini request failed for", model, modelError);
+        if (!timedOut) break;
       }
     }
 
     if (!result) {
       return json({
-        error: lastStatus === 503 || lastStatus === 500
-          ? "Googles AI-modeller är tillfälligt överbelastade. Försök igen om en stund."
-          : "Google kunde inte skapa analysen. Kontrollera Gemini API-nyckeln och funktionsloggarna.",
+        error: timedOut
+          ? "Googles AI-modeller svarade för långsamt. Försök igen om en stund."
+          : lastStatus === 503 || lastStatus === 500 || lastStatus === 502
+            ? "Googles AI-modeller är tillfälligt överbelastade. Försök igen om en stund."
+            : "Google kunde inte skapa analysen. Kontrollera Gemini API-nyckeln och funktionsloggarna.",
       }, 502);
     }
 
@@ -106,7 +117,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Training analysis failed", error);
     const message = error instanceof Error && error.name === "TimeoutError"
-      ? "Gemini svarade inte inom 25 sekunder. Försök igen."
+      ? "Supabase eller Google svarade inte i tid. Försök igen."
       : "Något gick fel när analysen skulle skapas. Kontrollera funktionsloggarna.";
     return json({ error: message }, 500);
   }
