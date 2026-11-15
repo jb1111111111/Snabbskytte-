@@ -217,7 +217,7 @@ function statsMarkup(){
  var logs=[],tests=[];
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
   p.tracks[k].log.forEach(function(e,i){logs.push(Object.assign({pistol:p.name,hand:k,_pid:p.id,_logIndex:i},e))});
-  p.tracks[k].tests.forEach(function(e,i){var t=Object.assign({pistol:p.name,hand:k,_pid:p.id,_testIndex:i},e);tests.push(t);logs.push(Object.assign({},t,{test:true,m:6,shots:t.shots||[],positions:t.positions||[],passed:!!t.passed,pts:Number(t.pts)||0,x:Number(t.x)||0,tm:t.tm||Number(t.time)||null}))});
+  p.tracks[k].tests.forEach(function(e,i){var t=Object.assign({pistol:p.name,hand:k,_pid:p.id,_testIndex:i},e);tests.push(t);logs.push(Object.assign({},t,{test:true,m:6,shots:t.shots||[],positions:t.positions||[],passed:t.passed===undefined?null:t.passed,pts:Number(t.pts)||0,x:Number(t.x)||0,tm:t.tm||Number(t.time)||null}))});
  })});
  logs.sort(function(a,b){return a.t-b.t});
  var total=logs.length,passed=logs.filter(function(e){return e.passed===true}).length,passEligible=logs.filter(function(e){return e.passed===true||e.passed===false}).length;
@@ -437,7 +437,7 @@ function render(){
   '<div class="card"><button class="btn" style="color:var(--bad)" onclick="if(confirm(\'Radera allt?\')){S={pistols:[{id:1,name:\'Pistol 1\',on:1,cells:{},log:[],tests:[]}]};pid=1;preset(1);cur=null;render()}">Radera all data</button></div>';
  }
  document.getElementById('v').innerHTML=h;
- document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['a','Statistik'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('')}
+ document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['a','Statistik'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('')}
 var tsel=50,shots6=[];
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function sg(n){return (n>0?'+':n<0?'−':'')+Math.abs(n)}
