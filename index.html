@@ -139,7 +139,7 @@ function chooseSeries(exclude,keep){
 function activateSeries(chosen){
  if(!chosen){cur=null;return}
  pid=chosen.pid;activeTrackId=chosen.support;
- cur={d:chosen.d,m:chosen.m,support:chosen.support};
+ cur={pid:chosen.pid,d:chosen.d,m:chosen.m,support:chosen.support};
  shots=[];shotPositions=[];activeShot=0;
 }
 function pick(keep){
