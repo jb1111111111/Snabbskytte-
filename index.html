@@ -214,7 +214,10 @@ function constrainTargetPoint(p,score){
  return{x:Math.max(0,Math.min(320,160+Math.cos(angle)*rad)),y:Math.max(0,Math.min(320,160+Math.sin(angle)*rad))};
 }
 function targetView(){
- var score=shots[activeShot],lim=targetLimits(score),size=(score==='5'||score==='Bom'||!score)?320:Math.min(320,lim.max*2+16);
+ var score=shots[activeShot],lim=targetLimits(score);
+ // Visa hela yttercirkeln för den valda poängen och ringen närmast utanför.
+ // X zoomar därför ut till hela 10-cirkeln, inte bara den lilla X-cirkeln.
+ var size=(score==='5'||score==='Bom'||!score)?320:Math.min(320,lim.max*2+24);
  return{x:(320-size)/2,y:(320-size)/2,size:size};
 }
 function targetPoint(ev){
