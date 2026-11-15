@@ -161,14 +161,55 @@ function submit(){
  msg={c:passed?'good':'mid',t:passed?'Godkänd serie!':'Serien inte godkänd',l:note,x:[],m:0,s:pn+' · '+trackName+' · '+cur.d+' yd · '+(cur.m==1?'1 skott':'2 skott')+': '+(I.n-miss)+'/'+I.n+' inom kravet, '+x+' X, '+pts+' poäng'};
  var planned=queuedCur;if(planned){activateSeries(planned);queuedCur=chooseSeries(cur,false)}else{pick()}render()}
 function lbl(m,d,i){var st=steps(m,d),s=st[Math.max(0,Math.min(st.length-1,i))];return s[0]+' s, ≥'+s[1]}
+
+function statsMarkup(){
+ var logs=[],tests=[];
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
+  p.tracks[k].log.forEach(function(e){logs.push(Object.assign({pistol:p.name,hand:k},e))});
+  p.tracks[k].tests.forEach(function(e){tests.push(Object.assign({pistol:p.name,hand:k},e))});
+ })});
+ logs.sort(function(a,b){return a.t-b.t});
+ var total=logs.length,passed=logs.filter(function(e){return e.passed}).length;
+ var shotsN=logs.reduce(function(a,e){return a+(e.shots||[]).length},0);
+ var points=logs.reduce(function(a,e){return a+(Number(e.pts)||0)},0);
+ var xs=logs.reduce(function(a,e){return a+(Number(e.x)||0)},0);
+ var avg=shotsN?points/shotsN:0,rate=total?100*passed/total:0;
+ var h='<div class="card"><h2>Din progression</h2><div class="mu">Statistiken bygger på sparade träningsserier från alla dina pistoler och båda träningssätten.</div>';
+ if(!total){h+='<p style="margin:12px 0 4px">Här visas din utveckling när du har sparat träningsserier. Börja med att genomföra några serier under Träna.</p></div>';}
+ else{
+  h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">';
+  [[total,'Serier'],[rate.toFixed(0)+' %','Godkända'],[avg.toFixed(2),'Poäng / skott'],[xs,'X-träffar']].forEach(function(v){h+='<div style="background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:10px"><div class="big" style="font-size:32px">'+v[0]+'</div><div class="mu">'+v[1]+'</div></div>'});
+  h+='</div><div class="mu" style="margin-top:8px">'+passed+' av '+total+' serier godkända · '+shotsN+' registrerade skott totalt.</div></div>';
+  var weeks={};logs.forEach(function(e){var d=new Date(e.t),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);d.setHours(0,0,0,0);var key=d.toISOString().slice(0,10);if(!weeks[key])weeks[key]={pts:0,n:0};weeks[key].pts+=Number(e.pts)||0;weeks[key].n+=(e.shots||[]).length});
+  var wk=Object.keys(weeks).sort().slice(-8);
+  h+='<div class="card"><h2>Utveckling vecka för vecka</h2><div class="mu">Genomsnittlig poäng per skott. Visar de senaste åtta veckorna med registrerad träning.</div>';
+  if(wk.length<2)h+='<p class="mu">Spara serier under fler veckor för att se en tydligare trend.</p>';
+  h+='<div style="display:flex;align-items:flex-end;gap:7px;height:145px;margin-top:14px;padding:0 2px;border-bottom:1px solid var(--ln)">';
+  wk.forEach(function(k){var v=weeks[k].n?weeks[k].pts/weeks[k].n:0,ht=Math.max(3,Math.min(100,v/10*100));h+='<div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px"><div class="mu" style="font-size:11px">'+v.toFixed(1)+'</div><div style="width:100%;height:'+ht+'%;background:var(--ac);border-radius:4px 4px 0 0"></div><div class="mu" style="font-size:10px;white-space:nowrap">'+k.slice(5)+'</div></div>'});
+  h+='</div></div>';
+  h+='<div class="card"><h2>Resultat per avstånd</h2><table><tr><th>Avstånd</th><th>Serier</th><th>Poäng/skott</th><th>Godkända</th></tr>';
+  D.forEach(function(d){var a=logs.filter(function(e){return Number(e.d)===d}),n=a.reduce(function(s,e){return s+(e.shots||[]).length},0),p=a.reduce(function(s,e){return s+(Number(e.pts)||0)},0),ok=a.filter(function(e){return e.passed}).length;if(a.length)h+='<tr><td>'+d+' yd</td><td>'+a.length+'</td><td>'+(n?(p/n).toFixed(2):'–')+'</td><td>'+Math.round(ok/a.length*100)+' %</td></tr>'});
+  h+='</table></div>';
+  h+='<div class="card"><h2>Med och utan stödhand</h2><table><tr><th>Träningssätt</th><th>Serier</th><th>Poäng/skott</th><th>Godkända</th></tr>';
+  [['support','Med stödhand'],['unsupported','Utan stödhand']].forEach(function(pair){var a=logs.filter(function(e){return e.hand===pair[0]}),n=a.reduce(function(s,e){return s+(e.shots||[]).length},0),p=a.reduce(function(s,e){return s+(Number(e.pts)||0)},0),ok=a.filter(function(e){return e.passed}).length;h+='<tr><td>'+pair[1]+'</td><td>'+a.length+'</td><td>'+(n?(p/n).toFixed(2):'–')+'</td><td>'+(a.length?Math.round(ok/a.length*100)+' %':'–')+'</td></tr>'});
+  h+='</table></div>';
+  h+='<div class="card"><h2>Resultat per pistol</h2><table><tr><th>Pistol</th><th>Serier</th><th>Poäng/skott</th></tr>';
+  S.pistols.forEach(function(p){var a=logs.filter(function(e){return e.pistol===p.name}),n=a.reduce(function(s,e){return s+(e.shots||[]).length},0),pts=a.reduce(function(s,e){return s+(Number(e.pts)||0)},0);if(a.length)h+='<tr><td>'+esc(p.name)+'</td><td>'+a.length+'</td><td>'+(n?(pts/n).toFixed(2):'–')+'</td></tr>'});
+  h+='</table></div>';
+ }
+ if(tests.length){h+='<div class="card"><h2>Tester</h2><div class="mu">'+tests.length+' sparade testresultat</div><table><tr><th>Datum</th><th>Pistol</th><th>Avstånd</th><th>Poäng</th><th>X</th></tr>'+tests.slice().sort(function(a,b){return b.t-a.t).slice(0,12).map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+esc(e.pistol)+'</td><td>'+e.d+' yd</td><td>'+e.pts+'/60</td><td>'+e.x+'</td></tr>'}).join('')+'</table></div>'}
+ h+='<div class="mu" style="padding:0 4px 10px">Historiken är personlig för kontot du är inloggad på. Offline-data visas bara på den här enheten.</div>';
+ return h;
+}
+
 function render(){
  var h='';
- if(tab!='h'&&tab!='s')h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+S.pistols.map(function(p){return '<button class="btn" style="'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button>'}).join('')+'</div>';
+ if(tab!='h'&&tab!='s'&&tab!='a')h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+S.pistols.map(function(p){return '<button class="btn" style="'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button>'}).join('')+'</div>';
  if(tab=='h'){
   h+='<div class="card" style="padding:20px 16px"><div style="font:700 42px/1 Barlow Condensed,sans-serif;color:var(--ac);margin-bottom:8px">SNABBSKYTTE</div><div style="font:700 25px/1.1 Barlow Condensed,sans-serif;margin-bottom:12px">Träna smartare. Skjut snabbare. Träffa bättre.</div><p>Snabbskytte är ett träningsverktyg för dig som vill utveckla snabbhet, precision och jämnhet i pistolskyttet – med särskilt fokus på milsnabb och fältskytte.</p><p>Övningarna simulerar olika skjutmoment genom att variera:</p><ul style="padding-left:21px"><li><b>Avstånd</b> – träna på mål på olika avstånd.</li><li><b>Tid</b> – utmana dig att genomföra momenten snabbare.</li><li><b>Målstorlek och träffkrav</b> – träna precision mot olika stora träffytor och krav.</li></ul><p>Målet är att skjuta snabbare utan att tappa kontroll eller precision. Genom återkommande serier, tester och uppföljning kan du följa utvecklingen och se vad du behöver träna mer på.</p><p>Du kan träna både <b>med stödhand och utan stödhand</b>, med separat progression och historik för respektive träningssätt.</p><button class="go" onclick="tab=\'t\';cur=null;msg=\'\';render()">BÖRJA TRÄNA</button></div><div class="card"><h2>Så använder du appen</h2><p><b>Träna</b> – genomför slumpade serier och registrera dina träffar.</p><p><b>Status</b> – följ nivåer, mätare och personliga rekord.</p><p><b>Test</b> – gör ett fristående 6-skottstest och följ resultaten över tid.</p><p><b>Data</b> – hantera pistoler och säkerhetskopiera dina resultat.</p></div>';
  }
  if(tab=='t'){
-  if(!cur)pick();if(!cur){document.getElementById('v').innerHTML='<div class="card"><h2>Träningen klar</h2><p>Alla aktiva nivåer är färdigtränade. Slå på fler nivåer under Status eller justera nivån manuellt.</p></div>';document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('');return;}var I=info();
+  if(!cur)pick();if(!cur){document.getElementById('v').innerHTML='<div class="card"><h2>Träningen klar</h2><p>Alla aktiva nivåer är färdigtränade. Slå på fler nivåer under Status eller justera nivån manuellt.</p></div>';document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['a','Statistik'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('');return;}var I=info();
   if(msg)h+=mh(msg);
   h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px"><div style="display:flex;align-items:baseline;gap:7px;color:var(--ac);line-height:1"><span style="font:700 38px/1 Barlow Condensed,sans-serif">'+(cur.support=='support'?'MED':'UTAN')+'</span><span style="font:600 16px/1.2 Barlow Condensed,sans-serif;letter-spacing:1px">STÖDHAND</span></div><button class="btn" style="margin:0;white-space:nowrap;font-size:14px;padding:8px 10px" onclick="pick();msg=\'\';render()">Slumpa serie</button></div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
   '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(I.r+(I.r<10?'+':''))+'</div>'+
@@ -198,6 +239,7 @@ function render(){
   D.forEach(function(d){[1,2].forEach(function(m){h+='<div class="row"><b style="width:70px">'+d+' yd '+m+'sk</b><button onclick="mv('+m+','+d+',-1)">−</button><button style="flex:3" disabled>'+lbl(m,d,cell(m,d).i)+'</button><button onclick="mv('+m+','+d+',1)">+</button></div>'})});
   h+='</div>';
  }
+ if(tab=='a'){h+=statsMarkup();}
  if(tab=='x'){
   h+='<div class="card"><h2>6-skottstest</h2><div class="mu">Fast tid och krav. Påverkar inte stegen.</div><div class="row"><button class="'+(testSupport=='support'?'s':'')+'" onclick="testSupport=\'support\';shots6=[];render()">Med stödhand</button><button class="'+(testSupport=='unsupported'?'s':'')+'" onclick="testSupport=\'unsupported\';shots6=[];render()">Utan stödhand</button></div><select id="td" onchange="tsel=+this.value;shots6=[];render()">'+D.map(function(d){return '<option value="'+d+'"'+(d==tsel?' selected':'')+'>'+d+' yd: '+TEST[d][0]+' s, krav '+(TEST[d][1]+'+')+'</option>'}).join('')+'</select>';
   for(var i=0;i<6;i++){h+='<div class="row"><b>'+(i+1)+'</b>'+Z.map(function(z){return '<button class="'+(shots6[i]==z?'s'+(z=='Bom'?' bom':''):'')+'" onclick="shots6['+i+']=\''+z+'\';render()">'+z+'</button>'}).join('')+'</div>'}
@@ -211,7 +253,7 @@ function render(){
   '<div class="card"><button class="btn" style="color:var(--bad)" onclick="if(confirm(\'Radera allt?\')){S={pistols:[{id:1,name:\'Pistol 1\',on:1,cells:{},log:[],tests:[]}]};pid=1;preset(1);cur=null;render()}">Radera all data</button></div>';
  }
  document.getElementById('v').innerHTML=h;
- document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('')}
+ document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['a','Statistik'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('')}
 var tsel=50,shots6=[];
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function sg(n){return (n>0?'+':n<0?'−':'')+Math.abs(n)}
