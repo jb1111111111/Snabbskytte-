@@ -198,21 +198,33 @@ function addp(){var id=Date.now(),p={id:id,name:'Pistol '+(S.pistols.length+1),o
 function shot(i,z){shots[i]=z;if(shotPositions[i])shotPositions[i]=constrainTargetPoint(shotPositions[i],z);render()}
 function selectShot(i){activeShot=i;render()}
 function targetLimits(score){
- if(score==='Bom')return{min:114,max:226};
- if(score==='5')return{min:94,max:226};
- if(score==='6')return{min:76,max:112};
- if(score==='7')return{min:58,max:94};
- if(score==='8')return{min:40,max:76};
- if(score==='9')return{min:22,max:58};
- if(score==='10')return{min:10,max:40};
- if(score==='X')return{min:0,max:22};
+ // Ringarnas faktiska radier. Poängen avgörs av träffmarkörens ytterkant.
+ if(score==='Bom')return{min:112,max:226};
+ if(score==='5')return{min:94,max:112};
+ if(score==='6')return{min:76,max:94};
+ if(score==='7')return{min:58,max:76};
+ if(score==='8')return{min:40,max:58};
+ if(score==='9')return{min:22,max:40};
+ if(score==='10')return{min:10,max:22};
+ if(score==='X')return{min:0,max:10};
  return{min:0,max:226};
 }
 function constrainTargetPoint(p,score){
  var lim=targetLimits(score),dx=p.x-160,dy=p.y-160,rad=Math.sqrt(dx*dx+dy*dy),angle=Math.atan2(dy,dx);
- // Den lilla träffpricken ska rymmas inom tillåtna poängzoner.
- var margin=4,min=lim.min+margin,max=lim.max-margin;
- if(max<min){var mid=(lim.min+lim.max)/2;min=mid;max=mid;}
+ // Markörens radie är 4,5. En träff får tangera poängringens
+ // ytterlinje, men får inte tangera ringen med högre poäng.
+ var markerRadius=4.5,min,max;
+ if(score==='Bom'){
+  min=lim.min+markerRadius;
+  max=lim.max-markerRadius;
+ }else if(score==='X'){
+  min=0;
+  max=lim.max-markerRadius;
+ }else{
+  min=lim.min+markerRadius;
+  max=lim.max+markerRadius;
+ }
+ if(max<min){var mid=(min+max)/2;min=mid;max=mid;}
  rad=Math.max(min,Math.min(max,rad));
  return{x:Math.max(0,Math.min(320,160+Math.cos(angle)*rad)),y:Math.max(0,Math.min(320,160+Math.sin(angle)*rad))};
 }
