@@ -199,9 +199,9 @@ function shot(i,z){shots[i]=z;render()}
 function selectShot(i){activeShot=i;render()}
 function targetPoint(ev){var svg=document.getElementById('shotTarget');if(!svg)return null;var r=svg.getBoundingClientRect();return{x:Math.max(0,Math.min(320,(ev.clientX-r.left)*320/r.width)),y:Math.max(0,Math.min(320,(ev.clientY-r.top)*320/r.height))}}
 var targetDragging=false;
-function targetDown(ev){if(!cur)return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=p;try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}render()}
-function targetMove(ev){if(!targetDragging)return;ev.preventDefault();var p=targetPoint(ev);if(p){shotPositions[activeShot]=p;render()}}
-function targetUp(ev){targetDragging=false;try{ev.currentTarget.releasePointerCapture(ev.pointerId)}catch(e){}}
+function targetDown(ev){if(!cur)return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=p;try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}}
+function targetMove(ev){if(!targetDragging)return;ev.preventDefault();var p=targetPoint(ev);if(p)shotPositions[activeShot]=p}
+function targetUp(ev){if(!targetDragging)return;targetDragging=false;try{ev.currentTarget.releasePointerCapture(ev.pointerId)}catch(e){}render()}
 function targetMarkup(n,active){
  var rings=[112,94,76,58,40,22],labels=['5','6','7','8','9','10'];
  var svg='<div class="target-wrap"><svg id="shotTarget" class="target-svg" viewBox="0 0 320 320" role="img" aria-label="Milsnabbtavla med poängzoner från 5 till 10 och X" onpointerdown="targetDown(event)" onpointermove="targetMove(event)" onpointerup="targetUp(event)" onpointercancel="targetUp(event)">';
