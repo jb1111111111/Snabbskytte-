@@ -174,7 +174,8 @@ function historyTarget(e,size){
  return svg+'</svg>';
 }
 function historyStyleName(k){return k==='support'?'Med stödhand':'Utan stödhand'}
-\nfunction statsMarkup(){
+
+function statsMarkup(){
  var logs=[],tests=[];
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
   p.tracks[k].log.forEach(function(e){logs.push(Object.assign({pistol:p.name,hand:k},e))});
