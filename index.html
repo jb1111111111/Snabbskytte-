@@ -218,7 +218,22 @@ function statsMarkup(){
  var points=logs.reduce(function(a,e){return a+(Number(e.pts)||0)},0);
  var xs=logs.reduce(function(a,e){return a+(Number(e.x)||0)},0);
  var avg=shotsN?points/shotsN:0,rate=total?100*passed/total:0;
- var h='<div class="card"><h2>Din progression</h2><div class="mu">Statistiken bygger på sparade träningsserier från alla dina pistoler och båda träningssätten.</div>';
+ function shotCount(e){return (e.shots&&e.shots.length)||Number(e.m)||0}
+ var summaryShots=0,completedSteps=0,totalSteps=0,styleRows='',distanceRows='',pistolRows='';
+ logs.forEach(function(e){summaryShots+=shotCount(e)});
+ ['support','unsupported'].forEach(function(k){var a=logs.filter(function(e){return e.hand===k}),n=a.reduce(function(v,e){return v+shotCount(e)},0);styleRows+='<tr><td>'+historyStyleName(k)+'</td><td>'+n+'</td><td>'+a.length+'</td></tr>'});
+ D.forEach(function(d){var a=logs.filter(function(e){return Number(e.d)===d}),n=a.reduce(function(v,e){return v+shotCount(e)},0);distanceRows+='<tr><td>'+d+' yd</td><td>'+n+'</td><td>'+a.length+'</td></tr>'});
+ S.pistols.forEach(function(p){var a=logs.filter(function(e){return e._pid===p.id}),n=a.reduce(function(v,e){return v+shotCount(e)},0);if(a.length)pistolRows+='<tr><td>'+esc(p.name)+'</td><td>'+n+'</td><td>'+a.length+'</td></tr>'});
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){D.forEach(function(d){[1,2].forEach(function(m){var st=steps(m,d),c=p.tracks[k].cells[m+'-'+d]||{i:0};totalSteps+=st.length;completedSteps+=Math.min(st.length,Math.max(0,Number(c.i)||0))})})})});
+ var progress=totalSteps?Math.round(completedSteps/totalSteps*100):0;
+ var h='<div class="card"><h2>Snabböversikt</h2><div class="mu">Samlade siffror från alla pistoler och träningssätt. Vanliga serier och tester ingår.</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">';
+ [[summaryShots.toLocaleString('sv-SE'),'Antal skott'],[total,'Serier och tester'],[completedSteps+' / '+totalSteps,'Avklarade nivåsteg'],[progress+' %','Total progression']].forEach(function(v){h+='<div style="background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:10px"><div class="big" style="font-size:32px">'+v[0]+'</div><div class="mu">'+v[1]+'</div></div>'});
+ h+='</div><div style="height:9px;background:var(--bg);border:1px solid var(--ln);border-radius:8px;overflow:hidden;margin-top:10px"><div style="height:100%;width:'+progress+'%;background:var(--ac);border-radius:8px"></div></div>';
+ h+='<h3 style="font:700 18px Barlow Condensed,sans-serif;margin:16px 0 6px">Skott per träningssätt</h3><table><tr><th>Träningssätt</th><th>Skott</th><th>Serier/tester</th></tr>'+styleRows+'</table>';
+ h+='<h3 style="font:700 18px Barlow Condensed,sans-serif;margin:16px 0 6px">Skott per avstånd</h3><table><tr><th>Avstånd</th><th>Skott</th><th>Serier/tester</th></tr>'+distanceRows+'</table>';
+ if(pistolRows)h+='<h3 style="font:700 18px Barlow Condensed,sans-serif;margin:16px 0 6px">Skott per pistol</h3><table><tr><th>Pistol</th><th>Skott</th><th>Serier/tester</th></tr>'+pistolRows+'</table>';
+ h+='</div>';
+ h+='<div class="card"><h2>Din progression</h2><div class="mu">Statistiken bygger på sparade träningsserier från alla dina pistoler och båda träningssätten.</div>'
  if(!total){h+='<p style="margin:12px 0 4px">Här visas din utveckling när du har sparat träningsserier. Börja med att genomföra några serier under Träna.</p></div>';}
  else{
   h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">';
