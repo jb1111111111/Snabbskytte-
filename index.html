@@ -173,12 +173,19 @@ function deleteHistorySeries(pidValue,trackValue,logIndex){
  p.tracks[trackValue].log.splice(logIndex,1);
  historySelectedIndex=-1;save();render();
 }
+function deleteHistoryTest(pidValue,trackValue,testIndex){
+ if(!confirm('Ta bort det här testresultatet? Åtgärden kan inte ångras.'))return;
+ var p=S.pistols.filter(function(x){return x.id===pidValue})[0];
+ if(!p||!p.tracks||!p.tracks[trackValue]||!p.tracks[trackValue].tests)return;
+ p.tracks[trackValue].tests.splice(testIndex,1);save();render();
+}
 function deleteAllTrainingSeries(){
- var count=0;
- S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){count+=p.tracks[k].log.length})});
- if(!count){alert('Det finns inga träningsserier att ta bort.');return}
- if(!confirm('Ta bort ALLA '+count+' träningsserier från alla pistoler och båda träningssätten? Testresultat och inställningar behålls. Åtgärden kan inte ångras.'))return;
- S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){p.tracks[k].log=[]})});
+ var count=0,seriesCount=0,testCount=0;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){seriesCount+=p.tracks[k].log.length;testCount+=p.tracks[k].tests.length})});
+ count=seriesCount+testCount;
+ if(!count){alert('Det finns inga träningsserier eller testresultat att ta bort.');return}
+ if(!confirm('Ta bort ALL träning: '+seriesCount+' vanliga serier och '+testCount+' testresultat från alla pistoler och båda träningssätten? Åtgärden kan inte ångras.'))return;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){p.tracks[k].log=[];p.tracks[k].tests=[]})});
  historySelectedIndex=-1;save();render();
 }
 function historyTarget(e,size){
@@ -194,7 +201,7 @@ function statsMarkup(){
  var logs=[],tests=[];
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
   p.tracks[k].log.forEach(function(e,i){logs.push(Object.assign({pistol:p.name,hand:k,_pid:p.id,_logIndex:i},e))});
-  p.tracks[k].tests.forEach(function(e){tests.push(Object.assign({pistol:p.name,hand:k},e))});
+  p.tracks[k].tests.forEach(function(e,i){tests.push(Object.assign({pistol:p.name,hand:k,_pid:p.id,_testIndex:i},e))});
  })});
  logs.sort(function(a,b){return a.t-b.t});
  var total=logs.length,passed=logs.filter(function(e){return e.passed}).length;
