@@ -236,15 +236,18 @@ function statsMarkup(){
  }
  h+='</div>';
  if(tests.length){h+='<div class="card"><h2>Tester</h2><div class="mu">'+tests.length+' sparade testresultat</div><table><tr><th>Datum</th><th>Pistol</th><th>Avstånd</th><th>Poäng</th><th>X</th></tr>'+tests.slice().sort(function(a,b){return b.t-a.t}).slice(0,12).map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+esc(e.pistol)+'</td><td>'+e.d+' yd</td><td>'+e.pts+'/60</td><td>'+e.x+'</td></tr>'}).join('')+'</table></div>'}
- h+='<div class="card"><h2>AI-analys av din träning</h2><p class="mu">Gemini analyserar dina sparade resultat och registrerade träffpositioner för att hitta mönster. Inga namn eller e-postadresser skickas.</p><label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:14px"><input id="aiConsent" type="checkbox" style="width:auto;margin-top:3px;flex:0 0 auto"><span>Jag godkänner att träningsresultat, skjutform och träffpositioner skickas till Google Gemini för analys. Googles gratisnivå kan använda innehåll för att förbättra sina produkter.</span></label><button class="go" id="aiAnalyzeBtn" onclick="analyzeTraining()">Analysera min träning</button><div id="aiAnalysisResult" style="white-space:pre-line;margin-top:12px"></div></div>';
+ h+='<div class="card"><h2>AI-analys av din träning</h2><p class="mu">Gemini analyserar träningsresultat och träffpositioner utifrån filtren ovan. Inga namn eller e-postadresser skickas.</p><label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:14px"><input id="aiConsent" type="checkbox" style="width:auto;margin-top:3px;flex:0 0 auto"><span>Jag godkänner att träningsresultat, skjutform och träffpositioner skickas till Google Gemini för analys. Googles gratisnivå kan använda innehåll för att förbättra sina produkter.</span></label><button class="go" id="aiAnalyzeBtn" onclick="analyzeTraining(false)">Analysera filtrerad träning</button><h3 style="margin:18px 0 6px">Fråga AI</h3><p class="mu">Skriv en egen fråga om träningsresultaten som visas med dina valda filter.</p><textarea id="aiQuestion" rows="3" maxlength="500" placeholder="Exempel: Ser du något återkommande mönster i mina senaste träffbilder?"></textarea><button class="btn" id="aiAskBtn" style="width:100%;margin-top:8px" onclick="analyzeTraining(true)">Fråga AI</button><div id="aiAnalysisResult" style="white-space:pre-line;margin-top:12px"></div></div>';
  h+='<div class="mu" style="padding:0 4px 10px">Historiken är personlig för kontot du är inloggad på. Offline-data visas bara på den här enheten.</div>';
  return h;
 }
 
-async function analyzeTraining(){
+async function analyzeTraining(askQuestion){
  var consent=document.getElementById('aiConsent');
- var button=document.getElementById('aiAnalyzeBtn');
+ var button=document.getElementById(askQuestion?'aiAskBtn':'aiAnalyzeBtn');
  var output=document.getElementById('aiAnalysisResult');
+ var questionField=document.getElementById('aiQuestion');
+ var question=askQuestion&&questionField?questionField.value.trim():'';
+ if(askQuestion&&!question){alert('Skriv en fråga till AI först.');return}
  if(!consent||!consent.checked){alert('Kryssa i rutan för att godkänna att träningsstatistiken skickas till Google för analys.');return}
  if(!cloudUser||!cloudReady||!window.sb){output.textContent='Logga in med ditt konto för att använda AI-analysen. Offline-läge stöds inte för AI.';return}
  var logs=[],tests=[];
@@ -254,13 +257,16 @@ async function analyzeTraining(){
    p.tracks[k].log.forEach(function(e){
     var style=e.shootingStyle||( (e.support||k)==='support'?'two_hand':'one_hand');
     var sequence=(e.shotSequence&&e.shotSequence.length?e.shotSequence:(e.shots||[]).map(function(score,i){return{shotNumber:i+1,score:score,position:(e.positions||[])[i]||null}}));
-    logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,pts:Number(e.pts)||0,shots:e.shots||[],sequence:sequence,positions:e.positions||[],passed:!!e.passed,shootingStyle:style,pistol:p.name});
+    logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,pts:Number(e.pts)||0,shots:e.shots||[],sequence:sequence,positions:e.positions||[],passed:!!e.passed,shootingStyle:style,hand:k,pistol:p.name});
    });
-   p.tracks[k].tests.forEach(function(e){tests.push({t:e.t,d:e.d,pts:e.pts,hit:e.hit,x:e.x,time:e.time,shootingStyle:k==='support'?'two_hand':'one_hand'})});
+   p.tracks[k].tests.forEach(function(e){tests.push({t:e.t,d:e.d,pts:e.pts,hit:e.hit,x:e.x,time:e.time,shootingStyle:k==='support'?'two_hand':'one_hand',hand:k,pistol:p.name})});
   });
  });
  logs.sort(function(a,b){return a.t-b.t});
  tests.sort(function(a,b){return a.t-b.t});
+ // AI-underlaget följer samma filter som träffbildshistoriken.
+ logs=logs.filter(function(e){return (historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
+ tests=tests.filter(function(e){return (historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  function pattern(e){
   var pts=(e.sequence||[]).filter(function(s){return s.position&&Number.isFinite(+s.position.x)&&Number.isFinite(+s.position.y)}).map(function(s){return{x:(s.position.x-160)/112,y:(160-s.position.y)/112,n:s.shotNumber,score:s.score}});
   if(!pts.length)return{positionData:false,reason:'Inga registrerade träffpositioner'};
@@ -279,21 +285,22 @@ async function analyzeTraining(){
  });
  var summary={
   dataVersion:2,
+  activeFilters:{shootingStyle:historyStyle,pistol:historyPistol,distanceYd:historyDistance},
   interpretationRules:['Analysera enhands (one_hand) och tvåhands (two_hand) separat.','Positioner är relativa till tavlans centrum och normaliserade mot 5-ringens radie.','Skottnummer anger ordningsföljden i serien.','Dra inte slutsatser om avtryckarteknik, grepp eller siktesjustering enbart från träffbilden. Beskriv observerade mönster och ange möjliga orsaker som hypoteser.','Om positionsdata saknas ska du uttryckligen säga att träffbildsanalys inte kan göras för dessa serier.'],
   totals:{series:logs.length,shots:logs.reduce(function(n,e){return n+e.shots.length},0),tests:tests.length},
   byShootingStyle:byStyle,
   recentSeries:logs.slice(-16).map(function(e){return{date:new Date(e.t).toISOString().slice(0,10),pistol:e.pistol,shootingStyle:e.shootingStyle,distanceYd:e.d,shotsPerSeries:e.m,seconds:e.tm,requiredScore:e.r,passed:e.passed,sequence:e.sequence.map(function(s){return{shotNumber:s.shotNumber,score:s.score,position:s.position?{x:+((s.position.x-160)/112).toFixed(3),y:+((160-s.position.y)/112).toFixed(3)}:null}}),pattern:pattern(e)} }),
   recentTests:tests.slice(-12)
- }; button.disabled=true;button.textContent='Analyserar…';output.textContent='Skickar sammanställd statistik till Gemini…';
+ }; button.disabled=true;button.textContent=askQuestion?'Skickar fråga…':'Analyserar…';output.textContent='Skickar filtrerad statistik'+(question?' och din fråga':'')+' till Gemini…';
  try{
-  var result=await window.sb.functions.invoke('analyze-training',{body:{stats:summary}});
+  var result=await window.sb.functions.invoke('analyze-training',{body:{stats:summary,question:question}});
   if(result.error)throw result.error;
   if(result.data&&result.data.error)throw new Error(result.data.error);
   output.textContent=result.data&&result.data.analysis?result.data.analysis:'Analysen kunde inte läsas. Försök igen.';
  }catch(e){
   output.textContent=(e&&e.message)||'Kunde inte skapa analysen. Kontrollera att AI-funktionen är installerad i Supabase.';
  }finally{
-  button.disabled=false;button.textContent='Analysera igen';
+  button.disabled=false;button.textContent=askQuestion?'Fråga AI igen':'Analysera filtrerad träning igen';
  }
 }
 
