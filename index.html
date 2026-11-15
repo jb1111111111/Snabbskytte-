@@ -233,7 +233,7 @@ async function analyzeTraining(){
   pts.forEach(function(p){quadrants[(p.y>=0?'upper':'lower')+(p.x<0?'Left':'Right')]++});
   var first=pts.slice(0,Math.ceil(n/2)),last=pts.slice(Math.floor(n/2));
   function center(a){return a.length?{x:+(a.reduce(function(s,p){return s+p.x},0)/a.length).toFixed(3),y:+(a.reduce(function(s,p){return s+p.y},0)/a.length).toFixed(3)}:null}
-  return{positionData:true,coordinateScale:'target radius 1; x right-positive, y up-positive',shotCount:n,centroid:{x:+mx.toFixed(3),y:+my.toFixed(3)},horizontalStd:+Math.sqrt(xx).toFixed(3),verticalStd:+Math.sqrt(yy).toFixed(3),majorAxisStd:+major.toFixed(3),minorAxisStd:+minor.toFixed(3),majorAxisAngleDeg:+(angle*180/Math.PI).toFixed(1),quadrants:quadrants,firstHalfCenter:center(first),secondHalfCenter:center(last),shots:pts.map(function(p){return{shotNumber:p.n,score:p.score,x:+p.x.toFixed(3),y:+p.y.toFixed(3)}})};
+  return{positionData:true,coordinateScale:'target radius 1; x right-positive, y up-positive',shotCount:n,centroid:{x:+mx.toFixed(3),y:+my.toFixed(3)},horizontalStd:+Math.sqrt(xx).toFixed(3),verticalStd:+Math.sqrt(yy).toFixed(3),majorAxisStd:+major.toFixed(3),minorAxisStd:+minor.toFixed(3),majorAxisAngleDeg:+(angle*180/Math.PI).toFixed(1),quadrants:quadrants,firstHalfCenter:center(first),secondHalfCenter:center(last)};
  }
  var byStyle=['one_hand','two_hand'].map(function(style){
   var a=logs.filter(function(e){return e.shootingStyle===style});
@@ -244,7 +244,7 @@ async function analyzeTraining(){
   interpretationRules:['Analysera enhands (one_hand) och tvåhands (two_hand) separat.','Positioner är relativa till tavlans centrum och normaliserade mot 5-ringens radie.','Skottnummer anger ordningsföljden i serien.','Dra inte slutsatser om avtryckarteknik, grepp eller siktesjustering enbart från träffbilden. Beskriv observerade mönster och ange möjliga orsaker som hypoteser.','Om positionsdata saknas ska du uttryckligen säga att träffbildsanalys inte kan göras för dessa serier.'],
   totals:{series:logs.length,shots:logs.reduce(function(n,e){return n+e.shots.length},0),tests:tests.length},
   byShootingStyle:byStyle,
-  recentSeries:logs.slice(-30).map(function(e){return{date:new Date(e.t).toISOString().slice(0,10),pistol:e.pistol,shootingStyle:e.shootingStyle,distanceYd:e.d,shotsPerSeries:e.m,seconds:e.tm,requiredScore:e.r,passed:e.passed,sequence:e.sequence.map(function(s){return{shotNumber:s.shotNumber,score:s.score,position:s.position?{x:+((s.position.x-160)/112).toFixed(3),y:+((160-s.position.y)/112).toFixed(3)}:null}}),pattern:pattern(e)} }),
+  recentSeries:logs.slice(-16).map(function(e){return{date:new Date(e.t).toISOString().slice(0,10),pistol:e.pistol,shootingStyle:e.shootingStyle,distanceYd:e.d,shotsPerSeries:e.m,seconds:e.tm,requiredScore:e.r,passed:e.passed,sequence:e.sequence.map(function(s){return{shotNumber:s.shotNumber,score:s.score,position:s.position?{x:+((s.position.x-160)/112).toFixed(3),y:+((160-s.position.y)/112).toFixed(3)}:null}}),pattern:pattern(e)} }),
   recentTests:tests.slice(-12)
  }; button.disabled=true;button.textContent='Analyserar…';output.textContent='Skickar sammanställd statistik till Gemini…';
  try{
