@@ -25,6 +25,20 @@ nav button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
 .row button{flex:1;padding:11px 0;border:1px solid var(--ln);background:var(--bg);color:var(--ink);border-radius:7px;font:600 16px Barlow,sans-serif}
 .row button.s{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .row button.s.bom{background:var(--bad);border-color:var(--bad);color:#fff}
+.score-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0 12px}
+.score-grid button{min-width:0;padding:10px 2px;border:1px solid var(--ln);background:var(--bg);color:var(--ink);border-radius:7px;font:600 16px Barlow,sans-serif}
+.score-grid button.s{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.score-grid button.s.bom{background:var(--bad);border-color:var(--bad);color:#fff}
+.shot-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:8px 0}
+.shot-tabs button{aspect-ratio:1;border:1px solid var(--ln);border-radius:50%;background:var(--bg);color:var(--ink);font:700 16px Barlow,sans-serif}
+.shot-tabs button.active{background:var(--ac);border-color:var(--ac);color:#fff}
+.shot-tabs button.filled:not(.active){box-shadow:inset 0 0 0 2px var(--ac)}
+.target-wrap{background:#fff;border:1px solid #b8beb7;border-radius:9px;padding:5px;margin:8px 0;color:#111;touch-action:none}
+.target-svg{display:block;width:100%;height:auto;max-height:360px;touch-action:none;user-select:none}
+.target-note{font-size:12px;color:var(--mu);margin:4px 0 0}
+.target-marker{pointer-events:none}
+.target-ring-label{font:700 10px Arial,sans-serif;fill:#fff;text-anchor:middle;dominant-baseline:middle}
+.target-shot-label{font:700 11px Arial,sans-serif;fill:#111;text-anchor:middle;dominant-baseline:middle}
 .go{width:100%;padding:14px;border:0;border-radius:8px;background:var(--hi);color:#1a1400;font:700 18px Barlow,sans-serif;margin-top:8px}
 .go:disabled{opacity:.4}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -57,11 +71,11 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
 <nav id="nav"></nav><div id="v"></div>
 </div></main>
 <script>
-var D=[3,7,15,25,50],Z=['Bom','7','8','9','10','X'],KEY='skytte1';
+var D=[3,7,15,25,50],Z=['Bom','5','6','7','8','9','10','X'],KEY='skytte1';
 var PROFILES={latt:[3,3,3,3.5,4],medel:[2,2,2,2.5,3],svar:[1.5,1.5,1.5,2,2.5]};
 var RINGS={3:[8,9,10],7:[8,9,10],15:[7,8,9],25:[7,8,9],50:[5,6,7]};
 var TEST={3:[6,9],7:[6,9],15:[8,9],25:[10,8],50:[12,7]};
-var tab='h',cur=null,shots=[],msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1;
+var tab='h',cur=null,shots=[],shotPositions=[],activeShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1;
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
 function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};var tr=p.tracks[k];if(!tr.cells)tr.cells={};if(!tr.log)tr.log=[];if(!tr.tests)tr.tests=[];if(!tr.enabled)tr.enabled={};if(!tr.timeSettings)tr.timeSettings={};[1,2].forEach(function(m){if(!tr.timeSettings[m])tr.timeSettings[m]={preset:'medel',adjust:{}};if(!tr.timeSettings[m].adjust)tr.timeSettings[m].adjust={}});D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(tr.enabled[key]===undefined)tr.enabled[key]=true})})})}
 if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
@@ -111,16 +125,16 @@ function pick(keep){
  if(!choices.length){alert('Alla aktiva träningsprogram är färdiga.');cur=null;return;}
  var total=choices.reduce(function(a,x){return a+x.w},0),r=Math.random()*total,chosen=choices[choices.length-1];
  for(var i=0;i<choices.length;i++){r-=choices[i].w;if(r<0){chosen=choices[i];break}}
- cur={d:chosen.d,m:chosen.m,support:activeTrackId};shots=[];
+ cur={d:chosen.d,m:chosen.m,support:activeTrackId};shots=[];shotPositions=[];activeShot=0;
 }
 function info(){activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);return{st:st,c:c,t:st[c.i][0],r:st[c.i][1],n:cur.m==1?5:6}}
-function done(){var I=info();shots=shots.slice();for(var i=0;i<I.n;i++)if(!shots[i])return false;return true}
+function done(){var I=info();for(var i=0;i<I.n;i++)if(!shots[i]||!shotPositions[i])return false;return true}
 function submit(){
  var I=info(),c=I.c,miss=0,pts=0,x=0;
  shots.forEach(function(z){if(val(z)<I.r)miss++;pts+=val(z);if(z=='X')x++});
  var passed=miss===0,first=!T().log.length;
  if(passed){c.i=Math.min(I.st.length,c.i+1);c.rec=Math.max(c.rec,c.i)}
- T().log.push({t:Date.now(),d:cur.d,m:cur.m,tm:I.t,r:I.r,shots:shots.slice(),miss:miss,pts:pts,x:x,support:cur.support,passed:passed});
+ T().log.push({t:Date.now(),d:cur.d,m:cur.m,tm:I.t,r:I.r,shots:shots.slice(),positions:shotPositions.slice(),miss:miss,pts:pts,x:x,support:cur.support,passed:passed});
  save();var pn=esc(P().name),trackName=cur.support=='support'?'Med stödhand':'Utan stödhand';
  var note=passed?(c.i>=I.st.length?'Alla sex steg klara på avståndet!':'Godkänd serie – du går vidare till nästa steg.'):'Inte godkänd. Alla skott måste träffa kravet eller bättre.';
  msg={c:passed?'good':'mid',t:passed?'Godkänd serie!':'Serien inte godkänd',l:note,x:[],m:0,s:pn+' · '+trackName+' · '+cur.d+' yd · '+(cur.m==1?'1 skott':'2 skott')+': '+(I.n-miss)+'/'+I.n+' inom kravet, '+x+' X, '+pts+' poäng'};
@@ -136,10 +150,14 @@ function render(){
   if(!cur)pick();if(!cur){document.getElementById('v').innerHTML='<div class="card"><h2>Träningen klar</h2><p>Alla aktiva nivåer är färdigtränade. Slå på fler nivåer under Status eller justera nivån manuellt.</p></div>';document.getElementById('nav').innerHTML=[['h','Start'],['t','Träna'],['s','Status'],['x','Test'],['d','Data']].map(function(a){return '<button class="'+(tab==a[0]?'on':'')+'" onclick="tab=\''+a[0]+'\';render()">'+a[1]+'</button>'}).join('');return;}var I=info();
   if(msg)h+=mh(msg);
   h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px"><div style="display:flex;align-items:baseline;gap:7px;color:var(--ac);line-height:1"><span style="font:700 38px/1 Barlow Condensed,sans-serif">'+(cur.support=='support'?'MED':'UTAN')+'</span><span style="font:600 16px/1.2 Barlow Condensed,sans-serif;letter-spacing:1px">STÖDHAND</span></div><button class="btn" style="margin:0;white-space:nowrap;font-size:14px;padding:8px 10px" onclick="pick();msg=\'\';render()">Slumpa serie</button></div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
-  '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(cur.d==50?'7:an':I.r+(I.r<10?'+':''))+'</div>'+
+  '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(I.r+(I.r<10?'+':''))+'</div>'+
   '<div class="mu" style="margin-top:6px">Precisionsnivå '+Math.min(I.c.i+1,3)+'/3 · steg '+(I.c.i+1)+'/3 · rekord steg '+(I.c.rec+1)+'</div>'+
   '<div class="mu">Start från 45 grader. Skott utanför tiden anges som Bom.</div></div><div class="card">';
-  for(var i=0;i<I.n;i++){h+='<div class="row"><b>'+(i+1)+'</b>'+Z.map(function(z){return '<button class="'+(shots[i]==z?'s'+(z=='Bom'?' bom':''):'')+'" onclick="shot('+i+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>'}
+  h+='<div><b>Skott</b><div class="shot-tabs">'+Array.from({length:I.n},function(_,i){return '<button class="'+(activeShot===i?'active ':'')+(shots[i]&&shotPositions[i]?'filled':'')+'" onclick="selectShot('+i+')" aria-label="Skott '+(i+1)+'">'+(i+1)+'</button>'}).join('')+'</div></div>';
+  h+='<div class="mu">Aktivt skott '+(activeShot+1)+' av '+I.n+'. Välj poäng och tryck på tavlan för att placera träffen. Dra markören för att finjustera.</div>';
+  h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\\''+z+'\\')">'+z+'</button>'}).join('')+'</div>';
+  h+=targetMarkup(I.n,activeShot);
+  h+='<div class="target-note">Tidigare skott visas men är låsta. Endast det aktiva skottet kan flyttas. Bom markeras i det vita området utanför tavlan.</div>';
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
   var L=T().log.slice(-6).reverse();
   if(L.length){h+='<div class="card"><h2>Senaste serier</h2><table>'+L.map(function(e){return '<tr><td>'+e.d+' yd · '+e.m+'sk</td><td>'+e.shots.join(' ')+'</td><td class="r">'+e.pts+'p</td></tr>'}).join('')+'</table></div>'}
@@ -154,7 +172,7 @@ function render(){
   h+='</div>';
  }
  if(tab=='x'){
-  h+='<div class="card"><h2>6-skottstest</h2><div class="mu">Fast tid och krav. Påverkar inte stegen.</div><div class="row"><button class="'+(testSupport=='support'?'s':'')+'" onclick="testSupport=\'support\';shots6=[];render()">Med stödhand</button><button class="'+(testSupport=='unsupported'?'s':'')+'" onclick="testSupport=\'unsupported\';shots6=[];render()">Utan stödhand</button></div><select id="td" onchange="tsel=+this.value;shots6=[];render()">'+D.map(function(d){return '<option value="'+d+'"'+(d==tsel?' selected':'')+'>'+d+' yd: '+TEST[d][0]+' s, krav '+(d==50?'7:an':TEST[d][1]+'+')+'</option>'}).join('')+'</select>';
+  h+='<div class="card"><h2>6-skottstest</h2><div class="mu">Fast tid och krav. Påverkar inte stegen.</div><div class="row"><button class="'+(testSupport=='support'?'s':'')+'" onclick="testSupport=\'support\';shots6=[];render()">Med stödhand</button><button class="'+(testSupport=='unsupported'?'s':'')+'" onclick="testSupport=\'unsupported\';shots6=[];render()">Utan stödhand</button></div><select id="td" onchange="tsel=+this.value;shots6=[];render()">'+D.map(function(d){return '<option value="'+d+'"'+(d==tsel?' selected':'')+'>'+d+' yd: '+TEST[d][0]+' s, krav '+(TEST[d][1]+'+')+'</option>'}).join('')+'</select>';
   for(var i=0;i<6;i++){h+='<div class="row"><b>'+(i+1)+'</b>'+Z.map(function(z){return '<button class="'+(shots6[i]==z?'s'+(z=='Bom'?' bom':''):'')+'" onclick="shots6['+i+']=\''+z+'\';render()">'+z+'</button>'}).join('')+'</div>'}
   h+='<input id="tt" type="number" step="0.1" placeholder="Sluttid i sekunder" style="margin-top:8px"><button class="go" onclick="saveTest()">Spara test</button></div>';
   if(P().tracks[testSupport].tests.length)h+='<div class="card"><h2>Testhistorik · '+(testSupport=='support'?'Med stödhand':'Utan stödhand')+'</h2><table><tr><th>Datum</th><th>yd</th><th>Poäng</th><th>Träff</th><th>X</th><th>Tid</th></tr>'+P().tracks[testSupport].tests.slice().reverse().map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+e.d+'</td><td>'+e.pts+'/60</td><td>'+e.hit+'/6</td><td>'+e.x+'</td><td>'+(e.time||'–')+'</td></tr>'}).join('')+'</table></div>';
@@ -178,6 +196,21 @@ function tg(id){S.pistols.forEach(function(p){if(p.id==id)p.on=p.on===0?1:0});sa
 function del(id){if(S.pistols.length<2){alert('Minst en pistol behövs');return}if(!confirm('Ta bort pistolen och all dess data?'))return;S.pistols=S.pistols.filter(function(p){return p.id!=id});pid=S.pistols[0].id;cur=null;save();render()}
 function addp(){var id=Date.now(),p={id:id,name:'Pistol '+(S.pistols.length+1),on:1,cells:{},log:[],tests:[]};ensureTracks(p);S.pistols.push(p);pid=id;preset(1);cur=null;save();render()}
 function shot(i,z){shots[i]=z;render()}
+function selectShot(i){activeShot=i;render()}
+function targetPoint(ev){var svg=document.getElementById('shotTarget');if(!svg)return null;var r=svg.getBoundingClientRect();return{x:Math.max(0,Math.min(320,(ev.clientX-r.left)*320/r.width)),y:Math.max(0,Math.min(320,(ev.clientY-r.top)*320/r.height))}}
+var targetDragging=false;
+function targetDown(ev){if(!cur)return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=p;try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}render()}
+function targetMove(ev){if(!targetDragging)return;ev.preventDefault();var p=targetPoint(ev);if(p){shotPositions[activeShot]=p;render()}}
+function targetUp(ev){targetDragging=false;try{ev.currentTarget.releasePointerCapture(ev.pointerId)}catch(e){}}
+function targetMarkup(n,active){
+ var rings=[112,94,76,58,40,22],labels=['5','6','7','8','9','10'];
+ var svg='<div class="target-wrap"><svg id="shotTarget" class="target-svg" viewBox="0 0 320 320" role="img" aria-label="Milsnabbtavla med poängzoner från 5 till 10 och X" onpointerdown="targetDown(event)" onpointermove="targetMove(event)" onpointerup="targetUp(event)" onpointercancel="targetUp(event)">';
+ svg+='<rect x="0" y="0" width="320" height="320" fill="#fff"/><circle cx="160" cy="160" r="112" fill="#080b09"/>';
+ rings.forEach(function(r,i){if(i>0)svg+='<circle cx="160" cy="160" r="'+r+'" fill="none" stroke="#fff" stroke-width="1.5"/>';var rr=(rings[i]+(i===rings.length-1?0:rings[i+1]))/2;svg+='<text x="160" y="'+(160-rr)+'" class="target-ring-label">'+labels[i]+'</text>'});
+ svg+='<text x="160" y="160" class="target-ring-label" style="font-size:9px">X</text>';
+ for(var i=0;i<n;i++){var p=shotPositions[i];if(p&&i<=active){var editable=i===active;svg+='<g class="target-marker"><circle cx="'+p.x+'" cy="'+p.y+'" r="11" fill="'+(editable?'#ffd54a':'#d7e8ff')+'" fill-opacity=".95" stroke="'+(editable?'#8b5a00':'#164b7a')+'" stroke-width="2"/><text x="'+p.x+'" y="'+p.y+'" class="target-shot-label">'+(shots[i]||'?')+'</text></g>'}}
+ svg+='</svg></div>';return svg
+}
 function mv(m,d,x){activeTrackId=statusSupport;var c=cell(m,d),n=steps(m,d).length;c.i=Math.max(0,Math.min(n-1,c.i+x));c.m=0;save();render()}
 function toggleLevel(m,d){activeTrackId=statusSupport;var en=T().enabled,key=m+'-'+d;if(en[key]!==false){var p=P(),count=0;['support','unsupported'].forEach(function(k){D.forEach(function(dd){[1,2].forEach(function(mm){if(p.tracks[k].enabled[mm+'-'+dd]!==false)count++})})});if(count<=1){alert('Minst en nivå måste vara påslagen.');return}en[key]=false}else en[key]=true;save();render()}
 function saveTest(){var r=TEST[tsel][1],pts=0,hit=0,x=0;for(var i=0;i<6;i++){var z=shots6[i];if(!z){alert('Ange alla 6 skott');return}pts+=val(z);if(val(z)>=r)hit++;if(z=='X')x++}
