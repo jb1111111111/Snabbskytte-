@@ -213,7 +213,7 @@ async function analyzeTraining(){
  S.pistols.forEach(function(p){
   ensureTracks(p);
   ['support','unsupported'].forEach(function(k){
-   p.tracks[k].log.forEach(function(e){logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,shots:e.shots,passed:!!e.passed,hand:k})});
+   p.tracks[k].log.forEach(function(e){logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,pts:Number(e.pts)||0,shots:e.shots,passed:!!e.passed,hand:k})});
    p.tracks[k].tests.forEach(function(e){tests.push({t:e.t,d:e.d,pts:e.pts,hit:e.hit,x:e.x,time:e.time,hand:k})});
   });
  });
