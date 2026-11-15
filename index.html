@@ -195,7 +195,7 @@ function ren(id,v){S.pistols.forEach(function(p){if(p.id==id)p.name=v||'Pistol'}
 function tg(id){S.pistols.forEach(function(p){if(p.id==id)p.on=p.on===0?1:0});save();render()}
 function del(id){if(S.pistols.length<2){alert('Minst en pistol behövs');return}if(!confirm('Ta bort pistolen och all dess data?'))return;S.pistols=S.pistols.filter(function(p){return p.id!=id});pid=S.pistols[0].id;cur=null;save();render()}
 function addp(){var id=Date.now(),p={id:id,name:'Pistol '+(S.pistols.length+1),on:1,cells:{},log:[],tests:[]};ensureTracks(p);S.pistols.push(p);pid=id;preset(1);cur=null;save();render()}
-function shot(i,z){shots[i]=z;if(shotPositions[i])shotPositions[i]=constrainTargetPoint(shotPositions[i],z);render()}
+function shot(i,z){if(shots[i]!==z)delete shotPositions[i];shots[i]=z;render()}
 function selectShot(i){activeShot=i;render()}
 function targetLimits(score){
  // Ringarnas faktiska radier. Poängen avgörs av träffmarkörens ytterkant.
@@ -241,8 +241,8 @@ function targetPoint(ev){
  return{x:v.x+(ev.clientX-r.left)*v.width/r.width,y:v.y+(ev.clientY-r.top)*v.height/r.height};
 }
 var targetDragging=false;
-function targetDown(ev){if(!cur)return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=constrainTargetPoint(p,shots[activeShot]);try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}}
-function targetMove(ev){if(!targetDragging)return;ev.preventDefault();var p=targetPoint(ev);if(p)shotPositions[activeShot]=constrainTargetPoint(p,shots[activeShot])}
+function targetDown(ev){if(!cur||!shots[activeShot])return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=constrainTargetPoint(p,shots[activeShot]);try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}}
+function targetMove(ev){if(!targetDragging||!shots[activeShot])return;ev.preventDefault();var p=targetPoint(ev);if(p)shotPositions[activeShot]=constrainTargetPoint(p,shots[activeShot])}
 function targetUp(ev){if(!targetDragging)return;targetDragging=false;try{ev.currentTarget.releasePointerCapture(ev.pointerId)}catch(e){}render()}
 function targetMarkup(n,active){
  var rings=[112,94,76,58,40,22],labels=['5','6','7','8','9','10'],v=targetView();
