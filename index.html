@@ -166,6 +166,21 @@ function lbl(m,d,i){var st=steps(m,d),s=st[Math.max(0,Math.min(st.length-1,i))];
 var historyLimit=10,historyStyle='all',historyPistol='all',historyDistance='all',historySelectedIndex=-1;
 function setHistoryFilter(kind,value){if(kind==='limit')historyLimit=Number(value)||10;else if(kind==='style')historyStyle=value;else if(kind==='pistol')historyPistol=value;else if(kind==='distance')historyDistance=value;historySelectedIndex=-1;render()}
 function openHistorySeries(index){historySelectedIndex=index;render()}
+function deleteHistorySeries(pidValue,trackValue,logIndex){
+ if(!confirm('Ta bort den här träningsserien? Åtgärden kan inte ångras.'))return;
+ var p=S.pistols.filter(function(x){return x.id===pidValue})[0];
+ if(!p||!p.tracks||!p.tracks[trackValue]||!p.tracks[trackValue].log)return;
+ p.tracks[trackValue].log.splice(logIndex,1);
+ historySelectedIndex=-1;save();render();
+}
+function deleteAllTrainingSeries(){
+ var count=0;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){count+=p.tracks[k].log.length})});
+ if(!count){alert('Det finns inga träningsserier att ta bort.');return}
+ if(!confirm('Ta bort ALLA '+count+' träningsserier från alla pistoler och båda träningssätten? Testresultat och inställningar behålls. Åtgärden kan inte ångras.'))return;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){p.tracks[k].log=[]})});
+ historySelectedIndex=-1;save();render();
+}
 function historyTarget(e,size){
  var positions=e.positions||[],shots=e.shots||[],svg='<svg viewBox="0 0 320 320" style="display:block;width:100%;max-width:'+size+'px;height:auto;background:#f5f2e9;border-radius:50%" role="img" aria-label="Träffbild">';
  [112,94,76,58,40,22].forEach(function(r,i){svg+='<circle cx="160" cy="160" r="'+r+'" fill="'+(i%2===0?'#fff':'#202820')+'" stroke="#59645b" stroke-width="1.2"/>'});
@@ -178,7 +193,7 @@ function historyStyleName(k){return k==='support'?'Med stödhand':'Utan stödhan
 function statsMarkup(){
  var logs=[],tests=[];
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
-  p.tracks[k].log.forEach(function(e){logs.push(Object.assign({pistol:p.name,hand:k},e))});
+  p.tracks[k].log.forEach(function(e,i){logs.push(Object.assign({pistol:p.name,hand:k,_pid:p.id,_logIndex:i},e))});
   p.tracks[k].tests.forEach(function(e){tests.push(Object.assign({pistol:p.name,hand:k},e))});
  })});
  logs.sort(function(a,b){return a.t-b.t});
@@ -213,7 +228,7 @@ function statsMarkup(){
 
  var filtered=logs.map(function(e,i){e._historyIndex=i;return e}).filter(function(e){return (historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  var latest=filtered.slice().reverse().slice(0,historyLimit);
- h+='<div class="card"><h2>Senaste serierna – träffbilder</h2><p class="mu">Välj en tavla för att se skotten numrerade i registreringsordning.</p>';
+ h+='<div class="card"><h2>Senaste serierna – träffbilder</h2><p class="mu">Välj en tavla för att se skotten numrerade i registreringsordning.</p><button class="btn" style="color:var(--bad);border-color:var(--bad);margin:8px 0 4px" onclick="deleteAllTrainingSeries()">Ta bort alla träningsserier</button>';
  h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0">';
  h+='<label class="mu">Antal<select style="display:block;width:100%;margin-top:4px" onchange="setHistoryFilter(\'limit\',this.value)"><option value="5" '+(historyLimit===5?'selected':'')+'>5 senaste</option><option value="10" '+(historyLimit===10?'selected':'')+'>10 senaste</option><option value="20" '+(historyLimit===20?'selected':'')+'>20 senaste</option></select></label>';
  h+='<label class="mu">Skjutform<select style="display:block;width:100%;margin-top:4px" onchange="setHistoryFilter(\'style\',this.value)"><option value="all" '+(historyStyle==='all'?'selected':'')+'>Alla</option><option value="support" '+(historyStyle==='support'?'selected':'')+'>Med stödhand</option><option value="unsupported" '+(historyStyle==='unsupported'?'selected':'')+'>Utan stödhand</option></select></label>';
@@ -232,7 +247,7 @@ function statsMarkup(){
   h+='<div style="border-top:1px solid var(--ln);margin-top:16px;padding-top:14px"><h3>Vald serie</h3><div class="mu">'+new Date(selected.t).toLocaleString('sv-SE')+' · '+esc(selected.pistol)+' · '+historyStyleName(selected.hand)+' · '+selected.d+' yd</div>';
   if(hasPos){selected._showNumbers=true;h+='<div style="max-width:340px;margin:12px auto">'+historyTarget(selected,320)+'</div>'}else h+='<p class="mu">Serien saknar sparade träffpositioner.</p>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+(selected.shots||[]).map(function(s,i){return '<span style="background:var(--bg);border:1px solid var(--ln);padding:5px 8px;border-radius:6px;font-size:12px">'+(i+1)+': '+esc(String(s))+'</span>'}).join('')+'</div>';
-  h+='<p style="margin:8px 0 0;font-size:13px">Poäng: <b>'+(Number(selected.pts)||0)+'</b> · Tid: <b>'+selected.tm+' s</b> · '+(selected.passed?'Godkänd':'Ej godkänd')+'</p></div>';
+  h+='<p style="margin:8px 0 0;font-size:13px">Poäng: <b>'+(Number(selected.pts)||0)+'</b> · Tid: <b>'+selected.tm+' s</b> · '+(selected.passed?'Godkänd':'Ej godkänd')+'</p><button class="btn" style="color:var(--bad);border-color:var(--bad);margin-top:10px" onclick="deleteHistorySeries('+selected._pid+',\''+selected.hand+'\','+selected._logIndex+')">Ta bort den här serien</button></div>';
  }
  h+='</div>';
  if(tests.length){h+='<div class="card"><h2>Tester</h2><div class="mu">'+tests.length+' sparade testresultat</div><table><tr><th>Datum</th><th>Pistol</th><th>Avstånd</th><th>Poäng</th><th>X</th></tr>'+tests.slice().sort(function(a,b){return b.t-a.t}).slice(0,12).map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+esc(e.pistol)+'</td><td>'+e.d+' yd</td><td>'+e.pts+'/60</td><td>'+e.x+'</td></tr>'}).join('')+'</table></div>'}
