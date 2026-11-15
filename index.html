@@ -198,8 +198,47 @@ function statsMarkup(){
   h+='</table></div>';
  }
  if(tests.length){h+='<div class="card"><h2>Tester</h2><div class="mu">'+tests.length+' sparade testresultat</div><table><tr><th>Datum</th><th>Pistol</th><th>Avstånd</th><th>Poäng</th><th>X</th></tr>'+tests.slice().sort(function(a,b){return b.t-a.t}).slice(0,12).map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+esc(e.pistol)+'</td><td>'+e.d+' yd</td><td>'+e.pts+'/60</td><td>'+e.x+'</td></tr>'}).join('')+'</table></div>'}
+ h+='<div class="card"><h2>AI-analys av din träning</h2><p class="mu">Gemini letar efter mönster i dina sparade resultat och ger konkreta förslag. Bara sammanställd träningsstatistik skickas – inga namn, e-postadresser eller träffpositioner.</p><label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:14px"><input id="aiConsent" type="checkbox" style="width:auto;margin-top:3px;flex:0 0 auto"><span>Jag godkänner att min sammanställda träningsstatistik skickas till Google Gemini för analys. Googles gratisnivå kan använda innehåll för att förbättra sina produkter.</span></label><button class="go" id="aiAnalyzeBtn" onclick="analyzeTraining()">Analysera min träning</button><div id="aiAnalysisResult" style="white-space:pre-line;margin-top:12px"></div></div>';
  h+='<div class="mu" style="padding:0 4px 10px">Historiken är personlig för kontot du är inloggad på. Offline-data visas bara på den här enheten.</div>';
  return h;
+}
+
+async function analyzeTraining(){
+ var consent=document.getElementById('aiConsent');
+ var button=document.getElementById('aiAnalyzeBtn');
+ var output=document.getElementById('aiAnalysisResult');
+ if(!consent||!consent.checked){alert('Kryssa i rutan för att godkänna att träningsstatistiken skickas till Google för analys.');return}
+ if(!cloudUser||!cloudReady||!window.sb){output.textContent='Logga in med ditt konto för att använda AI-analysen. Offline-läge stöds inte för AI.';return}
+ var logs=[],tests=[];
+ S.pistols.forEach(function(p){
+  ensureTracks(p);
+  ['support','unsupported'].forEach(function(k){
+   p.tracks[k].log.forEach(function(e){logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,shots:e.shots,passed:!!e.passed,hand:k})});
+   p.tracks[k].tests.forEach(function(e){tests.push({t:e.t,d:e.d,pts:e.pts,hit:e.hit,x:e.x,time:e.time,hand:k})});
+  });
+ });
+ logs.sort(function(a,b){return a.t-b.t});
+ tests.sort(function(a,b){return a.t-b.t});
+ var shotCount=logs.reduce(function(n,e){return n+(e.shots||[]).length},0);
+ var pointCount=logs.reduce(function(n,e){return n+(e.pts||0)},0);
+ var summary={
+  totals:{series:logs.length,shots:shotCount,averagePointsPerShot:shotCount?+(pointCount/shotCount).toFixed(2):0,passed:logs.filter(function(e){return e.passed}).length,tests:tests.length},
+  byDistance:D.map(function(d){var a=logs.filter(function(e){return Number(e.d)===d}),n=a.reduce(function(s,e){return s+(e.shots||[]).length},0),p=a.reduce(function(s,e){return s+(e.pts||0)},0);return{distanceYd:d,series:a.length,averagePointsPerShot:n?+(p/n).toFixed(2):null,passRate:a.length?+(100*a.filter(function(e){return e.passed}).length/a.length).toFixed(1):null}}),
+  byHand:['support','unsupported'].map(function(k){var a=logs.filter(function(e){return e.hand===k}),n=a.reduce(function(s,e){return s+(e.shots||[]).length},0),p=a.reduce(function(s,e){return s+(e.pts||0)},0);return{hand:k,series:a.length,averagePointsPerShot:n?+(p/n).toFixed(2):null,passRate:a.length?+(100*a.filter(function(e){return e.passed}).length/a.length).toFixed(1):null}}),
+  recentSeries:logs.slice(-35).map(function(e){return{date:new Date(e.t).toISOString().slice(0,10),distanceYd:e.d,shotsPerSeries:e.m,seconds:e.tm,requiredScore:e.r,shots:e.shots,passed:e.passed,hand:e.hand}}),
+  recentTests:tests.slice(-12)
+ };
+ button.disabled=true;button.textContent='Analyserar…';output.textContent='Skickar sammanställd statistik till Gemini…';
+ try{
+  var result=await window.sb.functions.invoke('analyze-training',{body:{stats:summary}});
+  if(result.error)throw result.error;
+  if(result.data&&result.data.error)throw new Error(result.data.error);
+  output.textContent=result.data&&result.data.analysis?result.data.analysis:'Analysen kunde inte läsas. Försök igen.';
+ }catch(e){
+  output.textContent=(e&&e.message)||'Kunde inte skapa analysen. Kontrollera att AI-funktionen är installerad i Supabase.';
+ }finally{
+  button.disabled=false;button.textContent='Analysera igen';
+ }
 }
 
 function render(){
