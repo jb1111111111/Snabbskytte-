@@ -211,7 +211,7 @@ function targetLimits(score){
 function constrainTargetPoint(p,score){
  var lim=targetLimits(score),dx=p.x-160,dy=p.y-160,rad=Math.sqrt(dx*dx+dy*dy),angle=Math.atan2(dy,dx);
  // Den lilla träffpricken ska rymmas inom tillåtna poängzoner.
- var margin=4.5,min=lim.min+margin,max=lim.max-margin;
+ var margin=4,min=lim.min+margin,max=lim.max-margin;
  if(max<min){var mid=(lim.min+lim.max)/2;min=mid;max=mid;}
  rad=Math.max(min,Math.min(max,rad));
  return{x:Math.max(0,Math.min(320,160+Math.cos(angle)*rad)),y:Math.max(0,Math.min(320,160+Math.sin(angle)*rad))};
