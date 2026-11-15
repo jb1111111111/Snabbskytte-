@@ -180,6 +180,14 @@ function deleteHistoryTest(pidValue,trackValue,testIndex){
  p.tracks[trackValue].tests.splice(testIndex,1);save();render();
 }
 function deleteHistoryEntry(isTest,pidValue,trackValue,index){if(isTest)deleteHistoryTest(pidValue,trackValue,index);else deleteHistorySeries(pidValue,trackValue,index)}
+function resetRecords(){
+ if(!confirm('Nollställa alla rekord för samtliga pistoler, avstånd och träningssätt? Träningshistorik och nuvarande progression behålls.'))return;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
+  var cells=p.tracks[k].cells||{};
+  Object.keys(cells).forEach(function(key){cells[key].rec=0});
+ })});
+ save();render();
+}
 function deleteAllTrainingSeries(){
  var count=0,seriesCount=0,testCount=0;
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){seriesCount+=p.tracks[k].log.length;testCount+=p.tracks[k].tests.length})});
@@ -377,7 +385,7 @@ function render(){
  }
  if(tab=='d'){
   h+='<div class="card"><h2>Förval</h2><div class="mu">Sätter startsteg för vald pistol (välj överst). Nollställer mätare.</div><button class="btn" onclick="if(confirm(\'Välja tidsprofil Lätt?\')){preset(0);render()}">Lätt</button><button class="btn" onclick="if(confirm(\'Välja tidsprofil Medel?\')){preset(1);render()}">Medel</button><button class="btn" onclick="if(confirm(\'Välja tidsprofil Svår?\')){preset(2);render()}">Svår</button></div>'+
-  '<div class="card"><h2>Radera träningsserier och tester</h2><div class="mu">Tar bort alla vanliga träningsserier och testresultat från samtliga pistoler och båda träningssätten. Inställningar och pistoler behålls.</div><button class="btn" style="color:var(--bad);border-color:var(--bad);margin-top:8px" onclick="deleteAllTrainingSeries()">Ta bort alla serier och tester</button></div>'+
+  '<div class="card"><h2>Rekord</h2><div class="mu">Nollställer registrerade rekordsteg för alla pistoler, avstånd och träningssätt. Träningshistorik och nuvarande progression påverkas inte.</div><button class="btn" style="color:var(--bad);border-color:var(--bad);margin-top:8px" onclick="resetRecords()">Nollställ rekord</button></div>'+'<div class="card"><h2>Radera träningsserier och tester</h2><div class="mu">Tar bort alla vanliga träningsserier och testresultat från samtliga pistoler och båda träningssätten. Inställningar och pistoler behålls.</div><button class="btn" style="color:var(--bad);border-color:var(--bad);margin-top:8px" onclick="deleteAllTrainingSeries()">Ta bort alla serier och tester</button></div>'+
   '<div class="card"><h2>Exportera</h2><div class="mu">CSV-fil för Excel: en rad per skott, inklusive testserier, poäng, träffposition och seriedata.</div><button class="go" onclick="exportCSV()">Exportera som CSV (Excel)</button></div>'+
   '<div class="card"><h2>Backup</h2><button class="btn" onclick="document.getElementById(\'ex\').value=JSON.stringify(S)">Visa data</button><button class="btn" onclick="imp()">Importera</button><textarea id="ex" rows="6" placeholder="Kopiera data hit, eller klistra in för import"></textarea></div>'+
   '<div class="card"><h2>Pistoler</h2><div class="mu">Byt namn eller ta bort pistoler. PÅ/AV för slumpning ställs in under Status.</div>'+S.pistols.map(function(p){return '<div class="row"><input value="'+esc(p.name)+'" onchange="ren('+p.id+',this.value)"><button style="flex:0 0 44px;color:var(--bad)" onclick="del('+p.id+')">✕</button></div>'}).join('')+'<button class="btn" onclick="addp()">Lägg till pistol</button></div>'+
