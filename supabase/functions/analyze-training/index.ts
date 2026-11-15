@@ -34,26 +34,17 @@ Deno.serve(async (req) => {
   if (!authorization) return json({ error: "Logga in för att använda träningsanalysen." }, 401);
 
   try {
-    // Verifiera token direkt mot Supabase Auth utan att ladda ett extra SDK.
     const authResponse = await fetch(supabaseUrl + "/auth/v1/user", {
       headers: { "apikey": supabaseAnonKey, "Authorization": authorization },
     });
-    if (!authResponse.ok) {
-      return json({ error: "Din inloggning kunde inte verifieras. Logga in igen." }, 401);
-    }
+    if (!authResponse.ok) return json({ error: "Din inloggning kunde inte verifieras. Logga in igen." }, 401);
     const user = await authResponse.json();
-    if (!user || !user.id) {
-      return json({ error: "Din inloggning kunde inte verifieras. Logga in igen." }, 401);
-    }
+    if (!user || !user.id) return json({ error: "Din inloggning kunde inte verifieras. Logga in igen." }, 401);
 
     const body = await req.json();
-    if (!body || !body.stats || typeof body.stats !== "object") {
-      return json({ error: "Träningsstatistik saknas." }, 400);
-    }
+    if (!body || !body.stats || typeof body.stats !== "object") return json({ error: "Träningsstatistik saknas." }, 400);
     const statsText = JSON.stringify(body.stats);
-    if (statsText.length > 12000) {
-      return json({ error: "Underlaget är för stort. Försök igen med färre träningsserier." }, 413);
-    }
+    if (statsText.length > 12000) return json({ error: "Underlaget är för stort. Försök igen med färre träningsserier." }, 413);
 
     const prompt = [
       "Du är en saklig och uppmuntrande träningsanalytiker för sportskytte med pistol.",
@@ -66,26 +57,47 @@ Deno.serve(async (req) => {
       statsText,
     ].join("\n\n");
 
-    const geminiResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(apiKey),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.35, maxOutputTokens: 750 },
-        }),
-        signal: AbortSignal.timeout(30000),
-      },
-    );
-
-    const result = await geminiResponse.json();
-    if (!geminiResponse.ok) {
-      console.error("Gemini API error", geminiResponse.status, result?.error?.message || "unknown");
-      if (geminiResponse.status === 429) {
-        return json({ error: "Googles kostnadsfria användningsgräns är nådd just nu. Försök igen senare." }, 429);
+    // Prova flera stabila Flash-modeller om en modell tillfälligt är överbelastad.
+    const models = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+    let result: any = null;
+    let lastStatus = 0;
+    for (const model of models) {
+      let response: Response | null = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        response = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.35, maxOutputTokens: 750 },
+            }),
+            signal: AbortSignal.timeout(25000),
+          },
+        );
+        if (response.ok) break;
+        lastStatus = response.status;
+        const errorBody = await response.json().catch(() => ({}));
+        console.error("Gemini model error", model, response.status, errorBody?.error?.message || "unknown");
+        if (response.status !== 503 && response.status !== 500) break;
+        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 900));
       }
-      return json({ error: "Google kunde inte skapa analysen just nu. Försök igen senare." }, 502);
+      if (response?.ok) {
+        result = await response.json();
+        break;
+      }
+      if (lastStatus === 429) {
+        return json({ error: "Googles kostnadsfria användningsgräns är nådd. Försök igen senare." }, 429);
+      }
+    }
+
+    if (!result) {
+      return json({
+        error: lastStatus === 503 || lastStatus === 500
+          ? "Googles AI-modeller är tillfälligt överbelastade. Försök igen om en stund."
+          : "Google kunde inte skapa analysen. Kontrollera Gemini API-nyckeln och funktionsloggarna.",
+      }, 502);
     }
 
     const analysis = result?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("").trim();
@@ -94,7 +106,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Training analysis failed", error);
     const message = error instanceof Error && error.name === "TimeoutError"
-      ? "Gemini svarade inte inom 30 sekunder. Försök igen."
+      ? "Gemini svarade inte inom 25 sekunder. Försök igen."
       : "Något gick fel när analysen skulle skapas. Kontrollera funktionsloggarna.";
     return json({ error: message }, 500);
   }
