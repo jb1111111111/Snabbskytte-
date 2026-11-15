@@ -75,7 +75,7 @@ var D=[3,7,15,25,50],Z=['Bom','5','6','7','8','9','10','X'],KEY='skytte1';
 var PROFILES={latt:[3,3,3,3.5,4],medel:[2,2,2,2.5,3],svar:[1.5,1.5,1.5,2,2.5]};
 var RINGS={3:[8,9,10],7:[8,9,10],15:[7,8,9],25:[7,8,9],50:[5,6,7]};
 var TEST={3:[6,9],7:[6,9],15:[8,9],25:[10,8],50:[12,7]};
-var tab='h',cur=null,shots=[],shotPositions=[],activeShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1;
+var tab='h',cur=null,queuedCur=null,shots=[],shotPositions=[],activeShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1;
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
 function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};var tr=p.tracks[k];if(!tr.cells)tr.cells={};if(!tr.log)tr.log=[];if(!tr.tests)tr.tests=[];if(!tr.enabled)tr.enabled={};if(!tr.timeSettings)tr.timeSettings={};[1,2].forEach(function(m){if(!tr.timeSettings[m])tr.timeSettings[m]={preset:'medel',adjust:{}};if(!tr.timeSettings[m].adjust)tr.timeSettings[m].adjust={}});D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(tr.enabled[key]===undefined)tr.enabled[key]=true})})})}
 if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
@@ -113,19 +113,40 @@ function cell(m,d){var C=T().cells,k=m+'-'+d;if(!C[k])C[k]={i:0,m:0,rec:0};retur
 function preset(p){var key=['latt','medel','svar'][p]||'medel',old=activeTrackId;['support','unsupported'].forEach(function(k){activeTrackId=k;[1,2].forEach(function(m){T().timeSettings[m].preset=key})});activeTrackId=old;save()}
 S.pistols.forEach(function(p){if(!Object.keys(p.cells).length){pid=p.id;preset(1)}});pid=S.pistols[0].id;
 function val(z){return z=='Bom'?0:z=='X'?10:+z}
+function chooseSeries(exclude,keep){
+ var oldPid=pid,oldTrack=activeTrackId,candidates=[];
+ var pool=S.pistols.filter(function(p){return keep?p.id==pid:p.on!==0});
+ if(!pool.length)pool=S.pistols.filter(function(p){return keep?p.id==pid:true});
+ pool.forEach(function(p){
+  ensureTracks(p);
+  ['support','unsupported'].forEach(function(k){
+   pid=p.id;activeTrackId=k;
+   D.forEach(function(d){[1,2].forEach(function(m){
+    if(p.tracks[k].enabled[m+'-'+d]===false)return;
+    if(exclude&&p.id==exclude.pid&&k==exclude.support&&d==exclude.d)return;
+    var c=p.tracks[k].cells[m+'-'+d]||{i:0},remaining=steps(m,d).length-c.i;
+    if(remaining>0)candidates.push({pid:p.id,d:d,m:m,support:k,w:remaining});
+   })});
+  });
+ });
+ if(!candidates.length&&exclude)return chooseSeries(null,keep);
+ pid=oldPid;activeTrackId=oldTrack;
+ if(!candidates.length)return null;
+ var total=candidates.reduce(function(a,x){return a+x.w},0),r=Math.random()*total;
+ for(var i=0;i<candidates.length;i++){r-=candidates[i].w;if(r<0)return candidates[i]}
+ return candidates[candidates.length-1];
+}
+function activateSeries(chosen){
+ if(!chosen){cur=null;return}
+ pid=chosen.pid;activeTrackId=chosen.support;
+ cur={d:chosen.d,m:chosen.m,support:chosen.support};
+ shots=[];shotPositions=[];activeShot=0;
+}
 function pick(keep){
- if(!keep){var pool=S.pistols.filter(function(p){return p.on!==0});if(!pool.length)pool=S.pistols;
-  var pw=pool.map(function(p){return ['support','unsupported'].reduce(function(total,k){ensureTracks(p);return total+D.reduce(function(a,d){return a+[1,2].reduce(function(b,m){var en=p.tracks[k].enabled[m+'-'+d]!==false;return b+(en?Math.max(0,steps(m,d).length-p.tracks[k].cells[m+'-'+d]?.i||0):0)},0)},0)},0)});
-  if(pw.every(function(x){return x===0})){alert('Slå på minst en nivå under Status för att kunna slumpa serier.');cur=null;return}
-  var totalP=pw.reduce(function(a,b){return a+b},0),rp=Math.random()*totalP,j=0;while(j<pool.length-1&&rp>pw[j]){rp-=pw[j];j++}pid=pool[j].id}
- var tracks=['support','unsupported'].filter(function(k){return D.some(function(d){return [1,2].some(function(m){return P().tracks[k].enabled[m+'-'+d]!==false})})});
- if(!tracks.length){alert('Slå på minst en nivå under Status för att kunna slumpa serier.');cur=null;return}
- activeTrackId=tracks[Math.floor(Math.random()*tracks.length)];
- var choices=[];D.forEach(function(d){[1,2].forEach(function(m){if(T().enabled[m+'-'+d]!==false){var c=cell(m,d),remaining=steps(m,d).length-c.i;if(remaining>0)choices.push({d:d,m:m,w:remaining})}})});
- if(!choices.length){alert('Alla aktiva träningsprogram är färdiga.');cur=null;return;}
- var total=choices.reduce(function(a,x){return a+x.w},0),r=Math.random()*total,chosen=choices[choices.length-1];
- for(var i=0;i<choices.length;i++){r-=choices[i].w;if(r<0){chosen=choices[i];break}}
- cur={d:chosen.d,m:chosen.m,support:activeTrackId};shots=[];shotPositions=[];activeShot=0;
+ var chosen=chooseSeries(null,!!keep);
+ if(!chosen){alert('Alla aktiva träningsprogram är färdiga. Slå på fler nivåer under Status.');cur=null;queuedCur=null;return}
+ activateSeries(chosen);
+ queuedCur=chooseSeries(cur,false);
 }
 function info(){activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);return{st:st,c:c,t:st[c.i][0],r:st[c.i][1],n:cur.m==1?5:6}}
 function done(){var I=info();for(var i=0;i<I.n;i++)if(!shots[i]||!shotPositions[i])return false;return true}
@@ -138,7 +159,7 @@ function submit(){
  save();var pn=esc(P().name),trackName=cur.support=='support'?'Med stödhand':'Utan stödhand';
  var note=passed?(c.i>=I.st.length?'Alla sex steg klara på avståndet!':'Godkänd serie – du går vidare till nästa steg.'):'Inte godkänd. Alla skott måste träffa kravet eller bättre.';
  msg={c:passed?'good':'mid',t:passed?'Godkänd serie!':'Serien inte godkänd',l:note,x:[],m:0,s:pn+' · '+trackName+' · '+cur.d+' yd · '+(cur.m==1?'1 skott':'2 skott')+': '+(I.n-miss)+'/'+I.n+' inom kravet, '+x+' X, '+pts+' poäng'};
- pick();render()}
+ var planned=queuedCur;if(planned){activateSeries(planned);queuedCur=chooseSeries(cur,false)}else{pick()}render()}
 function lbl(m,d,i){var st=steps(m,d),s=st[Math.max(0,Math.min(st.length-1,i))];return s[0]+' s, ≥'+s[1]}
 function render(){
  var h='';
@@ -158,8 +179,11 @@ function render(){
   h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>';
   h+=targetMarkup(I.n,activeShot);
   h+='<div class="target-note">Placeringen begränsas till vald poäng och ringen närmast utanför. För 5 ingår även den vita ytan. Bom placeras utanför 5-ringen. Tavlan zoomas automatiskt efter vald poäng.</div>';
-  var nextIndex=Math.min(I.st.length-1,I.c.i+1),nextStep=I.st[nextIndex],repeatStep=I.st[I.c.i];
-  h+='<div class="card" style="margin-top:10px;border:1px solid var(--line);background:var(--panel)"><div class="mu" style="font-weight:700;color:var(--ac);letter-spacing:.5px">NÄSTA SERIE – FÖRHANDSVISNING</div><div style="font:700 21px/1.1 Barlow Condensed,sans-serif;margin:7px 0 3px">Om aktuell serie godkänns</div><div style="font:700 25px/1.1 Barlow Condensed,sans-serif">'+cur.d+' <small>yd</small> · '+nextStep[0]+' s · krav '+nextStep[1]+'+</div><div class="mu" style="margin-top:9px">Om aktuell serie inte godkänns: samma steg igen · '+cur.d+' yd · '+repeatStep[0]+' s · krav '+repeatStep[1]+'+</div><div class="mu" style="margin-top:5px">'+(cur.support=='support'?'Med stödhand':'Utan stödhand')+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div></div>';
+  if(queuedCur){
+   var nextP=S.pistols.filter(function(p){return p.id==queuedCur.pid})[0];ensureTracks(nextP);
+   var nextTrack=nextP.tracks[queuedCur.support],nextCell=nextTrack.cells[queuedCur.m+'-'+queuedCur.d]||{i:0},nextStep=steps(queuedCur.m,queuedCur.d)[nextCell.i];
+   h+='<div class="card" style="margin-top:10px;border:1px solid var(--line);background:var(--panel)"><div class="mu" style="font-weight:700;color:var(--ac);letter-spacing:.5px">NÄSTA SERIE · REDAN VALD</div><div style="font:700 25px/1.1 Barlow Condensed,sans-serif;margin:7px 0 3px">'+queuedCur.d+' <small>yd</small> · '+nextStep[0]+' s · krav '+nextStep[1]+'+</div><div class="mu">'+esc(nextP.name)+' · '+(queuedCur.support=='support'?'Med stödhand':'Utan stödhand')+' · '+(queuedCur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div></div>';
+  }
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
   var L=T().log.slice(-6).reverse();
   if(L.length){h+='<div class="card"><h2>Senaste serier</h2><table>'+L.map(function(e){return '<tr><td>'+e.d+' yd · '+e.m+'sk</td><td>'+e.shots.join(' ')+'</td><td class="r">'+e.pts+'p</td></tr>'}).join('')+'</table></div>'}
