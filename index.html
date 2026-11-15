@@ -219,7 +219,8 @@ function constrainTargetPoint(p,score){
   max=lim.max-markerRadius;
  }else if(score==='X'){
   min=0;
-  max=lim.max-markerRadius;
+  // X-träff får ligga i 10-ringen om markörens ytterkant tangerar X-cirkeln.
+  max=lim.max+markerRadius;
  }else{
   min=lim.min+markerRadius;
   max=lim.max+markerRadius;
