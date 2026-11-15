@@ -129,8 +129,8 @@ function chooseSeries(exclude,keep){
    })});
   });
  });
- if(!candidates.length&&exclude)return chooseSeries(null,keep);
  pid=oldPid;activeTrackId=oldTrack;
+ if(!candidates.length&&exclude)return chooseSeries(null,keep);
  if(!candidates.length)return null;
  var total=candidates.reduce(function(a,x){return a+x.w},0),r=Math.random()*total;
  for(var i=0;i<candidates.length;i++){r-=candidates[i].w;if(r<0)return candidates[i]}
@@ -181,7 +181,8 @@ function render(){
   h+='<div class="target-note">Placeringen begränsas till vald poäng och ringen närmast utanför. För 5 ingår även den vita ytan. Bom placeras utanför 5-ringen. Tavlan zoomas automatiskt efter vald poäng.</div>';
   if(queuedCur){
    var nextP=S.pistols.filter(function(p){return p.id==queuedCur.pid})[0];ensureTracks(nextP);
-   var nextTrack=nextP.tracks[queuedCur.support],nextCell=nextTrack.cells[queuedCur.m+'-'+queuedCur.d]||{i:0},nextStep=steps(queuedCur.m,queuedCur.d)[nextCell.i];
+   var nextTrack=nextP.tracks[queuedCur.support],nextCell=nextTrack.cells[queuedCur.m+'-'+queuedCur.d]||{i:0},savePid=pid,saveTrack=activeTrackId;
+   pid=queuedCur.pid;activeTrackId=queuedCur.support;var nextStep=steps(queuedCur.m,queuedCur.d)[nextCell.i];pid=savePid;activeTrackId=saveTrack;
    h+='<div class="card" style="margin-top:10px;border:1px solid var(--line);background:var(--panel)"><div class="mu" style="font-weight:700;color:var(--ac);letter-spacing:.5px">NÄSTA SERIE · REDAN VALD</div><div style="font:700 25px/1.1 Barlow Condensed,sans-serif;margin:7px 0 3px">'+queuedCur.d+' <small>yd</small> · '+nextStep[0]+' s · krav '+nextStep[1]+'+</div><div class="mu">'+esc(nextP.name)+' · '+(queuedCur.support=='support'?'Med stödhand':'Utan stödhand')+' · '+(queuedCur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div></div>';
   }
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
