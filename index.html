@@ -172,9 +172,9 @@ function nextTestDistance(){
 }
 function beginRandomTest(){
  testMode=true;tab='x';queuedCur=null;shots6=[];shotPositions6=[];testActiveShot=0;
- if(S.testFlow.pair){pid=S.testFlow.pair.pid;tsel=S.testFlow.pair.distance;testSupport=S.testFlow.pair.nextSupport;}
- else{tsel=nextTestDistance();testSupport=Math.random()<0.5?'support':'unsupported';S.testFlow.pair={pid:pid,distance:tsel,nextSupport:testSupport==='support'?'unsupported':'support'};}
- msg={c:'mid',t:S.testFlow.pair.nextSupport?'Dags för avstämning · 1 av 2':'Dags för avstämning · 2 av 2',l:'6 skott · '+tsel+' yd · maxtid '+TEST_TIMES[tsel]+' sekunder. Ingen godkäntgräns. Båda skjutteknikerna testas på samma avstånd.',x:[],m:0,s:(testSupport==='support'?'Med stödhand':'Utan stödhand')};}
+ if(S.testFlow.pair){pid=S.testFlow.pair.pid;tsel=S.testFlow.pair.distance;testSupport=S.testFlow.pair.stage===2?S.testFlow.pair.nextSupport:S.testFlow.pair.firstSupport;}
+ else{tsel=nextTestDistance();testSupport=Math.random()<0.5?'support':'unsupported';S.testFlow.pair={pid:pid,distance:tsel,firstSupport:testSupport,nextSupport:testSupport==='support'?'unsupported':'support',stage:1};}
+ msg={c:'mid',t:S.testFlow.pair.stage===2?'Dags för avstämning · 2 av 2':'Dags för avstämning · 1 av 2',l:'6 skott · '+tsel+' yd · maxtid '+TEST_TIMES[tsel]+' sekunder. Ingen godkäntgräns. Båda skjutteknikerna testas på samma avstånd.',x:[],m:0,s:(testSupport==='support'?'Med stödhand':'Utan stödhand')};}
 function lbl(m,d,i){var st=steps(m,d),s=st[Math.max(0,Math.min(st.length-1,i))];return s[0]+' s, ≥'+s[1]}
 
 
@@ -522,7 +522,7 @@ function mv(m,d,x){activeTrackId=statusSupport;var c=cell(m,d),n=steps(m,d).leng
 function toggleLevel(m,d){activeTrackId=statusSupport;var en=T().enabled,key=m+'-'+d;if(en[key]!==false){var p=P(),count=0;['support','unsupported'].forEach(function(k){D.forEach(function(dd){[1,2].forEach(function(mm){if(p.tracks[k].enabled[mm+'-'+dd]!==false)count++})})});if(count<=1){alert('Minst en nivå måste vara påslagen.');return}en[key]=false}else en[key]=true;save();render()}
 function saveTest(){var pts=0,x=0,miss=0;for(var i=0;i<6;i++){var z=shots6[i];if(!z||!shotPositions6[i]){alert('Ange poäng och placering för alla 6 skott');return}pts+=val(z);if(z==='Bom')miss++;if(z==='X')x++}
  var tm=document.getElementById('tt').value;P().tracks[testSupport].tests.push({t:Date.now(),d:tsel,m:6,pts:pts,x:x,hit:6-miss,miss:miss,time:tm,tm:Number(tm)||null,timeLimit:TEST_TIMES[tsel],positions:shotPositions6.map(function(p){return{x:+p.x.toFixed(2),y:+p.y.toFixed(2)}}),shotSequence:shots6.map(function(score,i){return{shotNumber:i+1,score:score,position:{x:+shotPositions6[i].x.toFixed(2),y:+shotPositions6[i].y.toFixed(2)}}}),shootingStyle:testSupport==='support'?'two_hand':'one_hand',support:testSupport,passed:null,miss:miss,test:true,dataVersion:4});
- if(S.testFlow.pair&&S.testFlow.pair.nextSupport){S.testFlow.pair.nextSupport=null;save();beginRandomTest();render();return;}
+ if(S.testFlow.pair&&S.testFlow.pair.stage===1){S.testFlow.pair.stage=2;save();beginRandomTest();render();return;}
  S.testFlow.pair=null;S.testFlow.since=0;S.testFlow.nextAt=[8,10,12][Math.floor(Math.random()*3)];save();shots6=[];shotPositions6=[];testActiveShot=0;testMode=false;tab='t';cur=null;pick();render()}
 function csvCell(v){if(v===null||v===undefined)return '""';return '"'+String(v).replace(/"/g,'""')+'"'}
 function csvNumber(v){return v===null||v===undefined?'':String(v).replace('.',',')}
