@@ -242,6 +242,29 @@ function statsMarkup(){
   h+='</table></div>';
  }
 
+ h+='<div class="card"><h2>Nivå per avstånd</h2><div class="mu">Visar aktuell progression och bästa uppnådda steg för varje pistol och skjutform. 1 och 2 skott har separata nivåer. Nivån påverkas inte av filtren för träningshistoriken.</div>';
+ S.pistols.forEach(function(p){
+  ensureTracks(p);
+  ['support','unsupported'].forEach(function(k){
+   var track=p.tracks[k];
+   h+='<h3 style="font:700 18px Barlow Condensed,sans-serif;margin:14px 0 6px">'+esc(p.name)+' · '+historyStyleName(k)+'</h3>';
+   h+='<table><tr><th>Avstånd</th><th>1 skott</th><th>2 skott</th></tr>';
+   D.forEach(function(d){
+    h+='<tr><td><b>'+d+' yd</b></td>';
+    [1,2].forEach(function(m){
+     var c=track.cells[m+'-'+d]||{i:0,rec:0},st=steps(m,d),idx=Math.max(0,Math.min(st.length-1,Number(c.i)||0));
+     var current=Number(c.i)||0,best=Number(c.rec)||0;
+     var currentText=current>=st.length?'Klar':('Steg '+(current+1)+'/'+st.length+' · '+st[idx][0]+' s, ≥'+st[idx][1]);
+     var bestText=best>0?'Rekord '+(best+1)+'/'+st.length:'Inget rekord ännu';
+     h+='<td><div style="font-weight:600">'+currentText+'</div><div class="mu" style="font-size:12px">'+bestText+'</div><div style="height:5px;background:var(--bg);border-radius:5px;margin-top:5px;overflow:hidden"><div style="height:100%;width:'+Math.round(Math.min(st.length,current)/st.length*100)+'%;background:var(--ac);border-radius:5px"></div></div></td>';
+    });
+    h+='</tr>';
+   });
+   h+='</table>';
+  });
+ });
+ h+='</div>';
+
  var filtered=logs.map(function(e,i){e._historyIndex=i;return e}).filter(function(e){return (historyType==='all'||(historyType==='test'?!!e.test:!e.test))&&(historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  var latest=filtered.slice().reverse().slice(0,historyLimit);
  h+='<div class="card"><h2>Senaste serierna och testerna – träffbilder</h2><p class="mu">Välj en tavla för att se skotten numrerade i registreringsordning.</p>';
