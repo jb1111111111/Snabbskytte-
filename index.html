@@ -372,6 +372,7 @@ function render(){
  }
  if(tab=='d'){
   h+='<div class="card"><h2>Förval</h2><div class="mu">Sätter startsteg för vald pistol (välj överst). Nollställer mätare.</div><button class="btn" onclick="if(confirm(\'Välja tidsprofil Lätt?\')){preset(0);render()}">Lätt</button><button class="btn" onclick="if(confirm(\'Välja tidsprofil Medel?\')){preset(1);render()}">Medel</button><button class="btn" onclick="if(confirm(\'Välja tidsprofil Svår?\')){preset(2);render()}">Svår</button></div>'+
+  '<div class="card"><h2>Exportera</h2><div class="mu">CSV-fil för Excel: en rad per skott, inklusive testserier, poäng, träffposition och seriedata.</div><button class="go" onclick="exportCSV()">Exportera som CSV (Excel)</button></div>'+
   '<div class="card"><h2>Backup</h2><button class="btn" onclick="document.getElementById(\'ex\').value=JSON.stringify(S)">Visa data</button><button class="btn" onclick="imp()">Importera</button><textarea id="ex" rows="6" placeholder="Kopiera data hit, eller klistra in för import"></textarea></div>'+
   '<div class="card"><h2>Pistoler</h2><div class="mu">Byt namn eller ta bort pistoler. PÅ/AV för slumpning ställs in under Status.</div>'+S.pistols.map(function(p){return '<div class="row"><input value="'+esc(p.name)+'" onchange="ren('+p.id+',this.value)"><button style="flex:0 0 44px;color:var(--bad)" onclick="del('+p.id+')">✕</button></div>'}).join('')+'<button class="btn" onclick="addp()">Lägg till pistol</button></div>'+
   '<div class="card"><button class="btn" style="color:var(--bad)" onclick="if(confirm(\'Radera allt?\')){S={pistols:[{id:1,name:\'Pistol 1\',on:1,cells:{},log:[],tests:[]}]};pid=1;preset(1);cur=null;render()}">Radera all data</button></div>';
@@ -454,6 +455,27 @@ function mv(m,d,x){activeTrackId=statusSupport;var c=cell(m,d),n=steps(m,d).leng
 function toggleLevel(m,d){activeTrackId=statusSupport;var en=T().enabled,key=m+'-'+d;if(en[key]!==false){var p=P(),count=0;['support','unsupported'].forEach(function(k){D.forEach(function(dd){[1,2].forEach(function(mm){if(p.tracks[k].enabled[mm+'-'+dd]!==false)count++})})});if(count<=1){alert('Minst en nivå måste vara påslagen.');return}en[key]=false}else en[key]=true;save();render()}
 function saveTest(){var r=TEST[tsel][1],pts=0,hit=0,x=0,miss=0;for(var i=0;i<6;i++){var z=shots6[i];if(!z||!shotPositions6[i]){alert('Ange poäng och placering för alla 6 skott');return}pts+=val(z);if(val(z)>=r)hit++;else miss++;if(z=='X')x++}
  var tm=document.getElementById('tt').value;P().tracks[testSupport].tests.push({t:Date.now(),d:tsel,m:6,pts:pts,hit:hit,x:x,time:tm,tm:Number(tm)||null,shots:shots6.slice(),positions:shotPositions6.map(function(p){return{x:+p.x.toFixed(2),y:+p.y.toFixed(2)}}),shotSequence:shots6.map(function(score,i){return{shotNumber:i+1,score:score,position:{x:+shotPositions6[i].x.toFixed(2),y:+shotPositions6[i].y.toFixed(2)}}}),shootingStyle:testSupport==='support'?'two_hand':'one_hand',support:testSupport,passed:miss===0,miss:miss,test:true,dataVersion:3});save();shots6=[];shotPositions6=[];testActiveShot=0;render()}
+function csvCell(v){if(v===null||v===undefined)return '""';return '"'+String(v).replace(/"/g,'""')+'"'}
+function csvNumber(v){return v===null||v===undefined?'':String(v).replace('.',',')}
+function exportCSV(){
+ var rows=[['Datum','Tidpunkt','Typ','Pistol','Skjutform','Avstånd (yd)','Serie','Skott nr','Poäng','Träff X (höger)','Träff Y (uppåt)','Totalpoäng','X','Bom','Godkänt','Tid (sekunder)']];
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
+  var all=(p.tracks[k].log||[]).map(function(e){return Object.assign({},e,{_type:'Träning'})}).concat((p.tracks[k].tests||[]).map(function(e){return Object.assign({},e,{_type:'Test'})}));
+  all.forEach(function(e){
+   var seq=e.shotSequence&&e.shotSequence.length?e.shotSequence:(e.shots||[]).map(function(score,i){return{shotNumber:i+1,score:score,position:(e.positions||[])[i]||null}});
+   var date=new Date(e.t),dateText=date.toISOString().slice(0,10),timeText=date.toISOString().slice(11,19);
+   var style=e.shootingStyle||(e.support||k)==='support'?'Med stödhand':'Utan stödhand';
+   var total=e.pts!==undefined?e.pts:(e.shots||[]).reduce(function(a,z){return a+val(z)},0);
+   var base=[dateText,timeText,e._type,p.name,style,e.d,e.t];
+   if(seq.length){seq.forEach(function(sh){var pos=sh.position||{},row=base.concat([sh.shotNumber,sh.score,csvNumber(pos.x===undefined?'':(pos.x-160)/112),csvNumber(pos.y===undefined?'':(160-pos.y)/112),total,e.x||0,e.miss||0,e.passed===undefined?'':(e.passed?'Ja':'Nej'),e.tm||e.time||'']);rows.push(row)})}
+   else rows.push(base.concat(['','','','',total,e.x||0,e.miss||0,e.passed===undefined?'':(e.passed?'Ja':'Nej'),e.tm||e.time||'']));
+  });
+ })});
+ var csv='\ufeff'+rows.map(function(row){return row.map(csvCell).join(';')}).join('\r\n');
+ var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+ var url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='snabbskytte-traningsdata.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
 function imp(){try{var o=JSON.parse(document.getElementById('ex').value);if(o&&(o.pistols||o.cells)){if(!o.pistols)o={pistols:[{id:1,name:'Pistol 1',on:1,cells:o.cells,log:o.log||[],tests:o.tests||[]}]};S=o;pid=S.pistols[0].id;save();cur=null;render()}else alert('Ogiltig data')}catch(e){alert('Ogiltig data')}}
 render();
 
