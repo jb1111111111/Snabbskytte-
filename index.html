@@ -155,7 +155,7 @@ function render(){
   '<div class="mu">Start från 45 grader. Skott utanför tiden anges som Bom.</div></div><div class="card">';
   h+='<div><b>Skott</b><div class="shot-tabs">'+Array.from({length:I.n},function(_,i){return '<button class="'+(activeShot===i?'active ':'')+(shots[i]&&shotPositions[i]?'filled':'')+'" onclick="selectShot('+i+')" aria-label="Skott '+(i+1)+'">'+(i+1)+'</button>'}).join('')+'</div></div>';
   h+='<div class="mu">Aktivt skott '+(activeShot+1)+' av '+I.n+'. Välj poäng och tryck på tavlan för att placera träffen. Dra markören för att finjustera.</div>';
-  h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\\''+z+'\\')">'+z+'</button>'}).join('')+'</div>';
+  h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>';
   h+=targetMarkup(I.n,activeShot);
   h+='<div class="target-note">Tidigare skott visas men är låsta. Endast det aktiva skottet kan flyttas. Bom markeras i det vita området utanför tavlan.</div>';
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
