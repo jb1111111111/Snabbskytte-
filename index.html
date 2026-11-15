@@ -214,7 +214,7 @@ async function analyzeTraining(){
   ensureTracks(p);
   ['support','unsupported'].forEach(function(k){
    p.tracks[k].log.forEach(function(e){
-    var style=e.shootingStyle||(e.support||k)==='support'?'two_hand':'one_hand';
+    var style=e.shootingStyle||( (e.support||k)==='support'?'two_hand':'one_hand');
     var sequence=(e.shotSequence&&e.shotSequence.length?e.shotSequence:(e.shots||[]).map(function(score,i){return{shotNumber:i+1,score:score,position:(e.positions||[])[i]||null}}));
     logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,pts:Number(e.pts)||0,shots:e.shots||[],sequence:sequence,positions:e.positions||[],passed:!!e.passed,shootingStyle:style,pistol:p.name});
    });
