@@ -158,6 +158,8 @@ function render(){
   h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>';
   h+=targetMarkup(I.n,activeShot);
   h+='<div class="target-note">Placeringen begränsas till vald poäng och ringen närmast utanför. För 5 ingår även den vita ytan. Bom placeras utanför 5-ringen. Tavlan zoomas automatiskt efter vald poäng.</div>';
+  var nextIndex=Math.min(I.st.length-1,I.c.i+1),nextStep=I.st[nextIndex];
+  h+='<div class="card" style="margin-top:10px;border:1px solid var(--line);background:var(--panel)"><div class="mu" style="font-weight:700;color:var(--ac);letter-spacing:.5px">NÄSTA SERIE · OM AKTUELL SERIE GODKÄNNS</div><div style="font:700 25px/1.1 Barlow Condensed,sans-serif;margin:5px 0">'+cur.d+' <small>yd</small> · '+nextStep[0]+' s · krav '+nextStep[1]+'+</div><div class="mu">'+(cur.support=='support'?'Med stödhand':'Utan stödhand')+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div></div>';
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
   var L=T().log.slice(-6).reverse();
   if(L.length){h+='<div class="card"><h2>Senaste serier</h2><table>'+L.map(function(e){return '<tr><td>'+e.d+' yd · '+e.m+'sk</td><td>'+e.shots.join(' ')+'</td><td class="r">'+e.pts+'p</td></tr>'}).join('')+'</table></div>'}
