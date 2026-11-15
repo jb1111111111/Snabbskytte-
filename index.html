@@ -179,6 +179,7 @@ function deleteHistoryTest(pidValue,trackValue,testIndex){
  if(!p||!p.tracks||!p.tracks[trackValue]||!p.tracks[trackValue].tests)return;
  p.tracks[trackValue].tests.splice(testIndex,1);save();render();
 }
+function deleteHistoryEntry(isTest,pidValue,trackValue,index){if(isTest)deleteHistoryTest(pidValue,trackValue,index);else deleteHistorySeries(pidValue,trackValue,index)}
 function deleteAllTrainingSeries(){
  var count=0,seriesCount=0,testCount=0;
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){seriesCount+=p.tracks[k].log.length;testCount+=p.tracks[k].tests.length})});
@@ -235,7 +236,7 @@ function statsMarkup(){
 
  var filtered=logs.map(function(e,i){e._historyIndex=i;return e}).filter(function(e){return (historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  var latest=filtered.slice().reverse().slice(0,historyLimit);
- h+='<div class="card"><h2>Senaste serierna – träffbilder</h2><p class="mu">Välj en tavla för att se skotten numrerade i registreringsordning.</p><button class="btn" style="color:var(--bad);border-color:var(--bad);margin:8px 0 4px" onclick="deleteAllTrainingSeries()">Ta bort alla träningsserier</button>';
+ h+='<div class="card"><h2>Senaste serierna och testerna – träffbilder</h2><p class="mu">Välj en tavla för att se skotten numrerade i registreringsordning.</p><button class="btn" style="color:var(--bad);border-color:var(--bad);margin:8px 0 4px" onclick="deleteAllTrainingSeries()">Ta bort alla träningsserier</button>';
  h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0">';
  h+='<label class="mu">Antal<select style="display:block;width:100%;margin-top:4px" onchange="setHistoryFilter(\'limit\',this.value)"><option value="5" '+(historyLimit===5?'selected':'')+'>5 senaste</option><option value="10" '+(historyLimit===10?'selected':'')+'>10 senaste</option><option value="20" '+(historyLimit===20?'selected':'')+'>20 senaste</option></select></label>';
  h+='<label class="mu">Skjutform<select style="display:block;width:100%;margin-top:4px" onchange="setHistoryFilter(\'style\',this.value)"><option value="all" '+(historyStyle==='all'?'selected':'')+'>Alla</option><option value="support" '+(historyStyle==='support'?'selected':'')+'>Med stödhand</option><option value="unsupported" '+(historyStyle==='unsupported'?'selected':'')+'>Utan stödhand</option></select></label>';
@@ -245,16 +246,16 @@ function statsMarkup(){
   h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">';
   latest.forEach(function(e){var has=(e.positions||[]).some(Boolean),idx=e._historyIndex;h+='<button class="btn" style="padding:9px 6px;text-align:left;min-width:0;border:1px solid var(--ln);background:'+(historySelectedIndex===idx?'var(--bg)':'var(--sf)')+'" onclick="openHistorySeries('+idx+')">';
    h+=has?historyTarget(e,150):'<div style="height:150px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:50%;color:var(--mu);font-size:12px;text-align:center">Ingen sparad<br>träffbild</div>';
-   h+='<div style="font-size:13px;font-weight:700;margin-top:7px">'+new Date(e.t).toLocaleDateString('sv-SE')+' · '+(Number(e.pts)||0)+' p</div><div class="mu" style="font-size:11px">'+esc(e.pistol)+' · '+historyStyleName(e.hand)+' · '+e.d+' yd</div></button>'});
+   h+='<div style="font-size:13px;font-weight:700;margin-top:7px">'+(e.test?'TEST':'TRÄNING')+' · '+new Date(e.t).toLocaleDateString('sv-SE')+' · '+(Number(e.pts)||0)+' p</div><div class="mu" style="font-size:11px">'+esc(e.pistol)+' · '+historyStyleName(e.hand)+' · '+e.d+' yd</div></button>'});
   h+='</div>';
  }
  var selected=logs[historySelectedIndex];
  if(selected&&latest.some(function(e){return e._historyIndex===historySelectedIndex})){
   var hasPos=(selected.positions||[]).some(Boolean);
-  h+='<div style="border-top:1px solid var(--ln);margin-top:16px;padding-top:14px"><h3>Vald serie</h3><div class="mu">'+new Date(selected.t).toLocaleString('sv-SE')+' · '+esc(selected.pistol)+' · '+historyStyleName(selected.hand)+' · '+selected.d+' yd</div>';
+  h+='<div style="border-top:1px solid var(--ln);margin-top:16px;padding-top:14px"><h3>Vald '+(selected.test?'test':'serie')+'</h3><div class="mu">'+(selected.test?'6-skottstest':'Träningsserie')+' · '+new Date(selected.t).toLocaleString('sv-SE')+' · '+esc(selected.pistol)+' · '+historyStyleName(selected.hand)+' · '+selected.d+' yd</div>';
   if(hasPos){selected._showNumbers=true;h+='<div style="max-width:340px;margin:12px auto">'+historyTarget(selected,320)+'</div>'}else h+='<p class="mu">Serien saknar sparade träffpositioner.</p>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+(selected.shots||[]).map(function(s,i){return '<span style="background:var(--bg);border:1px solid var(--ln);padding:5px 8px;border-radius:6px;font-size:12px">'+(i+1)+': '+esc(String(s))+'</span>'}).join('')+'</div>';
-  h+='<p style="margin:8px 0 0;font-size:13px">Poäng: <b>'+(Number(selected.pts)||0)+'</b> · Tid: <b>'+selected.tm+' s</b> · '+(selected.passed?'Godkänd':'Ej godkänd')+'</p><button class="btn" style="color:var(--bad);border-color:var(--bad);margin-top:10px" onclick="deleteHistorySeries('+selected._pid+',\''+selected.hand+'\','+selected._logIndex+')">Ta bort den här serien</button></div>';
+  h+='<p style="margin:8px 0 0;font-size:13px">Poäng: <b>'+(Number(selected.pts)||0)+'</b> · Tid: <b>'+selected.tm+' s</b> · '+(selected.passed?'Godkänd':'Ej godkänd')+'</p><button class="btn" style="color:var(--bad);border-color:var(--bad);margin-top:10px" onclick="deleteHistoryEntry('+!!selected.test+','+selected._pid+',\''+selected.hand+'\','+(selected.test?selected._testIndex:selected._logIndex)+')">Ta bort det här resultatet</button></div>';
  }
  h+='</div>';
  if(tests.length){h+='<div class="card"><h2>Tester</h2><div class="mu">'+tests.length+' sparade testresultat</div><table><tr><th>Datum</th><th>Pistol</th><th>Avstånd</th><th>Poäng</th><th>X</th></tr>'+tests.slice().sort(function(a,b){return b.t-a.t}).slice(0,12).map(function(e){return '<tr><td>'+new Date(e.t).toLocaleDateString('sv-SE')+'</td><td>'+esc(e.pistol)+'</td><td>'+e.d+' yd</td><td>'+e.pts+'/60</td><td>'+e.x+'</td></tr>'}).join('')+'</table></div>'}
