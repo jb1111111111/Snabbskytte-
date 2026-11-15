@@ -157,7 +157,7 @@ function render(){
   h+='<div class="mu">Aktivt skott '+(activeShot+1)+' av '+I.n+'. Välj poäng och tryck på tavlan för att placera träffen. Dra markören för att finjustera.</div>';
   h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>';
   h+=targetMarkup(I.n,activeShot);
-  h+='<div class="target-note">Tidigare skott visas men är låsta. Endast det aktiva skottet kan flyttas. Bom markeras i det vita området utanför tavlan.</div>';
+  h+='<div class="target-note">Placeringen begränsas till vald poäng och ringen närmast utanför. För 5 ingår även den vita ytan. Bom placeras utanför 5-ringen. Tavlan zoomas automatiskt efter vald poäng.</div>';
   h+='<button class="go" '+(done()?'':'disabled')+' onclick="submit()">Spara serie</button></div>';
   var L=T().log.slice(-6).reverse();
   if(L.length){h+='<div class="card"><h2>Senaste serier</h2><table>'+L.map(function(e){return '<tr><td>'+e.d+' yd · '+e.m+'sk</td><td>'+e.shots.join(' ')+'</td><td class="r">'+e.pts+'p</td></tr>'}).join('')+'</table></div>'}
@@ -195,16 +195,40 @@ function ren(id,v){S.pistols.forEach(function(p){if(p.id==id)p.name=v||'Pistol'}
 function tg(id){S.pistols.forEach(function(p){if(p.id==id)p.on=p.on===0?1:0});save();render()}
 function del(id){if(S.pistols.length<2){alert('Minst en pistol behövs');return}if(!confirm('Ta bort pistolen och all dess data?'))return;S.pistols=S.pistols.filter(function(p){return p.id!=id});pid=S.pistols[0].id;cur=null;save();render()}
 function addp(){var id=Date.now(),p={id:id,name:'Pistol '+(S.pistols.length+1),on:1,cells:{},log:[],tests:[]};ensureTracks(p);S.pistols.push(p);pid=id;preset(1);cur=null;save();render()}
-function shot(i,z){shots[i]=z;render()}
+function shot(i,z){shots[i]=z;if(shotPositions[i])shotPositions[i]=constrainTargetPoint(shotPositions[i],z);render()}
 function selectShot(i){activeShot=i;render()}
-function targetPoint(ev){var svg=document.getElementById('shotTarget');if(!svg)return null;var r=svg.getBoundingClientRect();return{x:Math.max(0,Math.min(320,(ev.clientX-r.left)*320/r.width)),y:Math.max(0,Math.min(320,(ev.clientY-r.top)*320/r.height))}}
+function targetLimits(score){
+ if(score==='Bom')return{min:114,max:226};
+ if(score==='5')return{min:94,max:226};
+ if(score==='6')return{min:76,max:112};
+ if(score==='7')return{min:58,max:94};
+ if(score==='8')return{min:40,max:76};
+ if(score==='9')return{min:22,max:58};
+ if(score==='10')return{min:0,max:40};
+ if(score==='X')return{min:0,max:22};
+ return{min:0,max:226};
+}
+function constrainTargetPoint(p,score){
+ var lim=targetLimits(score),dx=p.x-160,dy=p.y-160,rad=Math.sqrt(dx*dx+dy*dy),angle=Math.atan2(dy,dx);
+ rad=Math.max(lim.min,Math.min(lim.max,rad));
+ return{x:Math.max(0,Math.min(320,160+Math.cos(angle)*rad)),y:Math.max(0,Math.min(320,160+Math.sin(angle)*rad))};
+}
+function targetView(){
+ var score=shots[activeShot],lim=targetLimits(score),size=(score==='5'||score==='Bom'||!score)?320:Math.min(320,lim.max*2+16);
+ return{x:(320-size)/2,y:(320-size)/2,size:size};
+}
+function targetPoint(ev){
+ var svg=document.getElementById('shotTarget');if(!svg)return null;
+ var r=svg.getBoundingClientRect(),v=svg.viewBox.baseVal;
+ return{x:v.x+(ev.clientX-r.left)*v.width/r.width,y:v.y+(ev.clientY-r.top)*v.height/r.height};
+}
 var targetDragging=false;
-function targetDown(ev){if(!cur)return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=p;try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}}
-function targetMove(ev){if(!targetDragging)return;ev.preventDefault();var p=targetPoint(ev);if(p)shotPositions[activeShot]=p}
+function targetDown(ev){if(!cur)return;ev.preventDefault();targetDragging=true;var p=targetPoint(ev);if(p)shotPositions[activeShot]=constrainTargetPoint(p,shots[activeShot]);try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch(e){}}
+function targetMove(ev){if(!targetDragging)return;ev.preventDefault();var p=targetPoint(ev);if(p)shotPositions[activeShot]=constrainTargetPoint(p,shots[activeShot])}
 function targetUp(ev){if(!targetDragging)return;targetDragging=false;try{ev.currentTarget.releasePointerCapture(ev.pointerId)}catch(e){}render()}
 function targetMarkup(n,active){
- var rings=[112,94,76,58,40,22],labels=['5','6','7','8','9','10'];
- var svg='<div class="target-wrap"><svg id="shotTarget" class="target-svg" viewBox="0 0 320 320" role="img" aria-label="Milsnabbtavla med poängzoner från 5 till 10 och X" onpointerdown="targetDown(event)" onpointermove="targetMove(event)" onpointerup="targetUp(event)" onpointercancel="targetUp(event)">';
+ var rings=[112,94,76,58,40,22],labels=['5','6','7','8','9','10'],v=targetView();
+ var svg='<div class="target-wrap"><svg id="shotTarget" class="target-svg" viewBox="'+v.x+' '+v.y+' '+v.size+' '+v.size+'" role="img" aria-label="Milsnabbtavla med poängzoner från 5 till 10 och X" onpointerdown="targetDown(event)" onpointermove="targetMove(event)" onpointerup="targetUp(event)" onpointercancel="targetUp(event)">';
  svg+='<rect x="0" y="0" width="320" height="320" fill="#fff"/><circle cx="160" cy="160" r="112" fill="#080b09"/>';
  rings.forEach(function(r,i){if(i>0)svg+='<circle cx="160" cy="160" r="'+r+'" fill="none" stroke="#fff" stroke-width="1.5"/>';var rr=(rings[i]+(i===rings.length-1?0:rings[i+1]))/2;svg+='<text x="160" y="'+(160-rr)+'" class="target-ring-label">'+labels[i]+'</text>'});
  svg+='<text x="160" y="160" class="target-ring-label" style="font-size:9px">X</text>';
