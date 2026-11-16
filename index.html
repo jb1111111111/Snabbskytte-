@@ -73,7 +73,7 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
 <script>
 var D=[3,7,15,25,50],Z=['Bom','5','6','7','8','9','10','X'],KEY='skytte1';
 var PROFILES={latt:[3,3,3,3.5,4],medel:[2,2,2,2.5,3],svar:[1.5,1.5,1.5,2,2.5]};
-var RINGS={3:[8,9,10],7:[8,9,10],15:[7,8,9],25:[7,8,9],50:[5,6,7]};
+var RINGS={3:[8,9,10,'X'],7:[8,9,10,'X'],15:[7,8,9,'X'],25:[7,8,9,'X'],50:[5,6,7,'X']};
 var TEST_TIMES={3:4,7:5,15:6,25:7,50:10};
 var tab='h',cur=null,queuedCur=null,shots=[],shotPositions=[],activeShot=0,shots6=[],shotPositions6=[],testActiveShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1,testMode=false;
 if(!S.testFlow)S.testFlow={since:0,nextAt:[8,10,12][Math.floor(Math.random()*3)]};
@@ -115,6 +115,7 @@ function cell(m,d){var C=T().cells,k=m+'-'+d;if(!C[k])C[k]={i:0,m:0,rec:0};retur
 function preset(p){var key=['latt','medel','svar'][p]||'medel',old=activeTrackId;['support','unsupported'].forEach(function(k){activeTrackId=k;[1,2].forEach(function(m){T().timeSettings[m].preset=key})});activeTrackId=old;save()}
 S.pistols.forEach(function(p){if(!Object.keys(p.cells).length){pid=p.id;preset(1)}});pid=S.pistols[0].id;
 function val(z){return z=='Bom'?0:z=='X'?10:+z}
+function meetsScore(score,required){return required==='X'?score==='X':val(score)>=Number(required)}
 function chooseSeries(exclude,keep){
  var oldPid=pid,oldTrack=activeTrackId,candidates=[];
  var pool=S.pistols.filter(function(p){return keep?p.id==pid:p.on!==0});
@@ -154,14 +155,19 @@ function pick(keep){
 function info(){activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);return{st:st,c:c,t:st[c.i][0],r:st[c.i][1],n:cur.m==1?5:6}}
 function done(){var I=info();for(var i=0;i<I.n;i++)if(!shots[i]||!shotPositions[i])return false;return true}
 function submit(){
- var I=info(),c=I.c,miss=0,pts=0,x=0;
- shots.forEach(function(z){if(val(z)<I.r)miss++;pts+=val(z);if(z=='X')x++});
- var passed=miss===0,first=!T().log.length;
- if(passed){c.i=Math.min(I.st.length,c.i+1);c.rec=Math.max(c.rec,c.i)}
- T().log.push({t:Date.now(),d:cur.d,m:cur.m,tm:I.t,r:I.r,shots:shots.slice(),positions:shotPositions.map(function(p){return p?{x:+p.x.toFixed(2),y:+p.y.toFixed(2)}:null}),shotSequence:shots.map(function(score,i){return{shotNumber:i+1,score:score,position:shotPositions[i]?{x:+shotPositions[i].x.toFixed(2),y:+shotPositions[i].y.toFixed(2)}:null}}),shootingStyle:cur.support==='support'?'two_hand':'one_hand',dataVersion:2,miss:miss,pts:pts,x:x,support:cur.support,passed:passed});
+ var I=info(),c=I.c,pts=0,x=0,actualTime=Number(document.getElementById('seriesMaxTime').value);
+ if(!Number.isFinite(actualTime)||actualTime<=0){alert('Ange längsta repetitionstiden för hela serien.');return}
+ shots.forEach(function(z){pts+=val(z);if(z==='X')x++});
+ var before=c.i,bestIndex=-1;
+ I.st.forEach(function(step,index){if(actualTime<=step[0]+0.0001&&shots.every(function(z){return meetsScore(z,step[1])}))bestIndex=index});
+ var passed=bestIndex>=before;
+ if(passed){c.i=Math.max(c.i,Math.min(I.st.length,bestIndex+1));c.rec=Math.max(c.rec,c.i)}
+ var miss=shots.filter(function(z){return !meetsScore(z,I.r)}).length;
+ T().log.push({t:Date.now(),d:cur.d,m:cur.m,tm:actualTime,requiredTime:I.t,r:I.r,achievedStep:bestIndex+1,progressionBefore:before,progressionAfter:c.i,shots:shots.slice(),positions:shotPositions.map(function(p){return p?{x:+p.x.toFixed(2),y:+p.y.toFixed(2)}:null}),shootingStyle:cur.support==='support'?'two_hand':'one_hand',dataVersion:3,miss:miss,pts:pts,x:x,support:cur.support,passed:passed});
  save();var pn=esc(P().name),trackName=cur.support=='support'?'Med stödhand':'Utan stödhand';
- var note=passed?(c.i>=I.st.length?'Alla sex steg klara på avståndet!':'Godkänd serie – du går vidare till nästa steg.'):'Inte godkänd. Alla skott måste träffa kravet eller bättre.';
- msg={c:passed?'good':'mid',t:passed?'Godkänd serie!':'Serien inte godkänd',l:note,x:[],m:0,s:pn+' · '+trackName+' · '+cur.d+' yd · '+(cur.m==1?'1 skott':'2 skott')+': '+(I.n-miss)+'/'+I.n+' inom kravet, '+x+' X, '+pts+' poäng'};
+ var jumped=passed&&c.i>before+1;
+ var note=passed?(c.i>=I.st.length?'Alla nivåsteg klara på avståndet!':jumped?'Direkt uppflyttad till steg '+c.i+' av '+I.st.length+'.':'Godkänd – du går vidare till nästa steg.'):'Du klarade inte tids- och precisionskraven för nästa steg. Din nivå behålls.';
+ msg={c:passed?'good':'mid',t:passed?(jumped?'Nivåplacering uppdaterad!':'Godkänd serie!'):'Nivån oförändrad',l:note,x:[],m:0,s:pn+' · '+trackName+' · '+cur.d+' yd · '+(cur.m==1?'5 enskott':'3 dubbelserier')+': '+(I.n-miss)+'/'+I.n+' på aktuell precisionsnivå, '+x+' X, '+pts+' poäng · längsta tid '+actualTime.toFixed(2)+' s'};
  S.testFlow.since=(Number(S.testFlow.since)||0)+1;
  var planned=queuedCur;
  if(S.testFlow.since>=S.testFlow.nextAt&&S.testFlow.since%2===0){beginRandomTest();save();render();return;}
@@ -406,7 +412,8 @@ function render(){
   h+='<div class="mu">Aktivt skott '+(activeShot+1)+' av '+I.n+'. Välj poäng och tryck på tavlan för att placera träffen. Dra markören för att finjustera.</div>';
   h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>';
   h+=targetMarkup(I.n,activeShot);
-  h+='<div class="target-note">Placeringen begränsas till vald poäng och ringen närmast utanför. För 5 ingår även den vita ytan. Bom placeras utanför 5-ringen. Tavlan zoomas automatiskt efter vald poäng.</div>';
+  h+='<div class="target-note">Registrera skotten från sämst till bäst. Ordningen är endast för inmatning – den motsvarar inte skottens faktiska tidsordning.</div>';
+  h+='<label for="seriesMaxTime" style="display:block;margin-top:12px;font-weight:600">Längsta repetitionstid för hela serien (sekunder)</label><input id="seriesMaxTime" type="number" min="0.1" step="0.01" inputmode="decimal" placeholder="T.ex. 1.50" style="margin-top:5px"><div class="mu">'+(cur.m===1?'Ange den längsta tiden av dina 5 enskott.':'Ange den längsta tiden av dina 3 dubbelserier.')+'</div>';
   if(queuedCur){
    var nextP=S.pistols.filter(function(p){return p.id==queuedCur.pid})[0];ensureTracks(nextP);
    var nextTrack=nextP.tracks[queuedCur.support],nextCell=nextTrack.cells[queuedCur.m+'-'+queuedCur.d]||{i:0},savePid=pid,saveTrack=activeTrackId;
