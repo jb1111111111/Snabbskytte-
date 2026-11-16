@@ -76,8 +76,8 @@ var PROFILES={latt:[3,3,3,3.5,4],medel:[2,2,2,2.5,3],svar:[1.5,1.5,1.5,2,2.5]};
 var RINGS={3:[8,9,10,'X'],7:[8,9,10,'X'],15:[7,8,9,'X'],25:[7,8,9,'X'],50:[5,6,7,'X']};
 var TEST_TIMES={3:4,7:5,15:6,25:7,50:10};
 var tab='h',cur=null,queuedCur=null,shots=[],shotPositions=[],activeShot=0,shots6=[],shotPositions6=[],testActiveShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1,testMode=false,seriesTimeInput='';
-if(!S.testFlow)S.testFlow={since:0,nextAt:[8,10,12][Math.floor(Math.random()*3)]};
-if(!Array.isArray(S.testFlow.distanceBag))S.testFlow.distanceBag=[];
+function ensureTestFlow(){if(!S.testFlow)S.testFlow={since:0,nextAt:[8,10,12][Math.floor(Math.random()*3)]};if(!Array.isArray(S.testFlow.distanceBag))S.testFlow.distanceBag=[];}
+ensureTestFlow();
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
 function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};var tr=p.tracks[k];if(!tr.cells)tr.cells={};if(!tr.log)tr.log=[];if(!tr.tests)tr.tests=[];if(!tr.enabled)tr.enabled={};if(!tr.timeSettings)tr.timeSettings={};[1,2].forEach(function(m){if(!tr.timeSettings[m])tr.timeSettings[m]={preset:'medel',adjust:{}};if(!tr.timeSettings[m].adjust)tr.timeSettings[m].adjust={}});D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(tr.enabled[key]===undefined)tr.enabled[key]=true})})})}
 if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
@@ -625,6 +625,7 @@ async function startCloud(user){
     }
     if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
     S.pistols.forEach(ensureTracks);
+    ensureTestFlow();
     pid=S.pistols[0].id;
     cur=null;msg='';
     cloudReady=true;
