@@ -188,11 +188,28 @@ function lbl(m,d,i){var st=steps(m,d);if(i>=st.length)return'Klar';var s=st[Math
 var historyLimit=10,historyStyle='all',historyPistol='all',historyDistance='all',historyType='all',historySelectedIndex=-1;
 function setHistoryFilter(kind,value){if(kind==='limit')historyLimit=Number(value)||10;else if(kind==='style')historyStyle=value;else if(kind==='pistol')historyPistol=value;else if(kind==='distance')historyDistance=value;else if(kind==='type')historyType=value;historySelectedIndex=-1;render()}
 function openHistorySeries(index){historySelectedIndex=index;render()}
+function recalculateCellProgression(p,trackValue,distance,shotsPerRep){
+ var tr=p.tracks[trackValue],key=shotsPerRep+'-'+distance,c=tr.cells[key];
+ if(!c)return;
+ var records=(tr.log||[]).filter(function(e){return Number(e.d)===Number(distance)&&Number(e.m)===Number(shotsPerRep)}).slice().sort(function(a,b){return Number(a.t)-Number(b.t)});
+ var level=0,best=0,hasLegacy=false;
+ records.forEach(function(e){
+  var time=Number(e.tm),shotList=e.shots||[];
+  if(Number.isFinite(time)&&time>0&&shotList.length===(shotsPerRep===1?5:6)){
+   var st=steps(shotsPerRep,distance),bestIndex=-1;
+   st.forEach(function(step,index){if(time<=step[0]+0.0001&&shotList.every(function(z){return meetsScore(z,step[1])}))bestIndex=index});
+   if(bestIndex>=level){level=Math.min(st.length,bestIndex+1);best=Math.max(best,level)}
+  }else if(Number(e.progressionAfter)>0){hasLegacy=true}
+ });
+ if(!hasLegacy){c.i=level;c.rec=best;}
+}
 function deleteHistorySeries(pidValue,trackValue,logIndex){
  if(!confirm('Ta bort den här träningsserien? Åtgärden kan inte ångras.'))return;
  var p=S.pistols.filter(function(x){return x.id===pidValue})[0];
  if(!p||!p.tracks||!p.tracks[trackValue]||!p.tracks[trackValue].log)return;
+ var removed=p.tracks[trackValue].log[logIndex];
  p.tracks[trackValue].log.splice(logIndex,1);
+ if(removed)recalculateCellProgression(p,trackValue,removed.d,removed.m);
  historySelectedIndex=-1;save();render();
 }
 function deleteHistoryTest(pidValue,trackValue,testIndex){
