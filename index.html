@@ -212,7 +212,13 @@ function deleteHistorySeries(pidValue,trackValue,logIndex){
  if(!p||!p.tracks||!p.tracks[trackValue]||!p.tracks[trackValue].log)return;
  var removed=p.tracks[trackValue].log[logIndex];
  p.tracks[trackValue].log.splice(logIndex,1);
- if(removed)recalculateCellProgression(p,trackValue,removed.d,removed.m);
+ if(removed){
+  var tr=p.tracks[trackValue],distance=Number(removed.d),shotsPerRep=Number(removed.m),key=shotsPerRep+'-'+distance;
+  var remaining=(tr.log||[]).filter(function(e){return Number(e.d)===distance&&Number(e.m)===shotsPerRep});
+  var c=tr.cells[key];
+  if(c&&!remaining.length){c.i=0;c.rec=0;c.m=0;}
+  else if(c){recalculateCellProgression(p,trackValue,distance,shotsPerRep);}
+ }
  historySelectedIndex=-1;save();render();
 }
 function deleteHistoryTest(pidValue,trackValue,testIndex){
