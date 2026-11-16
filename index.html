@@ -486,7 +486,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;
 function sg(n){return (n>0?'+':n<0?'−':'')+Math.abs(n)}
 function mh(o){var g=o.c=='good',col=g?'var(--ac)':o.c=='bad'?'var(--bad)':'var(--mu)',big=g&&/^(Nytt|Du |Toppen)/.test(o.t);
  return '<div class="msg" style="border-left-color:'+col+(big?';background:var(--ac);color:var(--on);padding:14px':'')+'"><div style="font:700 '+(big?30:21)+'px Barlow Condensed,sans-serif">'+o.t+'</div><div>'+o.l+'</div>'+o.x.map(function(t){return '<div style="margin-top:4px">'+t+'</div>'}).join('')+'<div style="margin:8px 0 2px;letter-spacing:3px">'+[-2,-1,0,1,2].map(function(v){return '<span style="'+(v==o.m?'font-weight:700;text-decoration:underline':'opacity:.5')+'">'+sg(v)+'</span>'}).join(' ')+'</div><div style="opacity:.8;font-size:14px">'+o.s+'</div></div>'}
-function selp(id){pid=id;cur=null;msg='';pick(true);render()}
+function selp(id){pid=id;cur=null;msg='';if(tab==='d'){activeTrackId=statusSupport;save();render();return;}pick(true);render()}
 function ren(id,v){S.pistols.forEach(function(p){if(p.id==id)p.name=v||'Pistol'});save();render()}
 function tg(id){S.pistols.forEach(function(p){if(p.id==id)p.on=p.on===0?1:0});save();render()}
 function del(id){if(S.pistols.length<2){alert('Minst en pistol behövs');return}if(!confirm('Ta bort pistolen och all dess data?'))return;S.pistols=S.pistols.filter(function(p){return p.id!=id});pid=S.pistols[0].id;cur=null;save();render()}
