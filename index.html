@@ -181,7 +181,7 @@ function beginRandomTest(){
  if(S.testFlow.pair){pid=S.testFlow.pair.pid;tsel=S.testFlow.pair.distance;testSupport=S.testFlow.pair.stage===2?S.testFlow.pair.nextSupport:S.testFlow.pair.firstSupport;}
  else{tsel=nextTestDistance();testSupport=Math.random()<0.5?'support':'unsupported';S.testFlow.pair={pid:pid,distance:tsel,firstSupport:testSupport,nextSupport:testSupport==='support'?'unsupported':'support',stage:1};}
  msg={c:'mid',t:S.testFlow.pair.stage===2?'Dags för avstämning · 2 av 2':'Dags för avstämning · 1 av 2',l:'6 skott · '+tsel+' yd · maxtid '+TEST_TIMES[tsel]+' sekunder. Ingen godkäntgräns. Båda skjutteknikerna testas på samma avstånd.',x:[],m:0,s:(testSupport==='support'?'Med stödhand':'Utan stödhand')};}
-function lbl(m,d,i){var st=steps(m,d),s=st[Math.max(0,Math.min(st.length-1,i))];return s[0]+' s, ≥'+s[1]}
+function lbl(m,d,i){var st=steps(m,d);if(i>=st.length)return'Klar';var s=st[Math.max(0,i)];return s[0]+' s, ≥'+s[1]}
 
 
 var historyLimit=10,historyStyle='all',historyPistol='all',historyDistance='all',historyType='all',historySelectedIndex=-1;
@@ -303,7 +303,7 @@ function statsMarkup(){
 
  var filtered=logs.map(function(e,i){e._historyIndex=i;return e}).filter(function(e){return (historyType==='all'||(historyType==='test'?!!e.test:!e.test))&&(historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  var latest=filtered.slice().reverse().slice(0,historyLimit);
- h+='<div class="card"><h2>Senaste serierna och testerna – träffbilder</h2><p class="mu">Välj en tavla för att se skotten numrerade i registreringsordning.</p>';
+ h+='<div class="card"><h2>Senaste serierna och testerna – träffbilder</h2><p class="mu">Träffarna visas utan skottnummer eftersom registreringsordningen inte är den faktiska skottordningen.</p>';
  h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0">';
  h+='<label class="mu">Antal<select style="display:block;width:100%;margin-top:4px" onchange="setHistoryFilter(\'limit\',this.value)"><option value="5" '+(historyLimit===5?'selected':'')+'>5 senaste</option><option value="10" '+(historyLimit===10?'selected':'')+'>10 senaste</option><option value="20" '+(historyLimit===20?'selected':'')+'>20 senaste</option></select></label>';
  h+='<label class="mu">Typ<select style="display:block;width:100%;margin-top:4px" onchange="setHistoryFilter(\'type\',this.value)"><option value="all" '+(historyType==='all'?'selected':'')+'>Träning och test</option><option value="training" '+(historyType==='training'?'selected':'')+'>Endast träning</option><option value="test" '+(historyType==='test'?'selected':'')+'>Endast test</option></select></label>';
@@ -347,10 +347,10 @@ async function analyzeTraining(askQuestion){
   ['support','unsupported'].forEach(function(k){
    p.tracks[k].log.forEach(function(e){
     var style=e.shootingStyle||( (e.support||k)==='support'?'two_hand':'one_hand');
-    var sequence=(e.shotSequence&&e.shotSequence.length?e.shotSequence:(e.shots||[]).map(function(score,i){return{shotNumber:i+1,score:score,position:(e.positions||[])[i]||null}}));
+    var sequence=(e.shots||[]).map(function(score,i){return{score:score,position:(e.positions||[])[i]||null}});
     logs.push({t:e.t,d:e.d,m:e.m,tm:e.tm,r:e.r,pts:Number(e.pts)||0,shots:e.shots||[],sequence:sequence,positions:e.positions||[],passed:!!e.passed,shootingStyle:style,hand:k,pistol:p.name});
    });
-   p.tracks[k].tests.forEach(function(e){var seq=e.shotSequence&&e.shotSequence.length?e.shotSequence:(e.shots||[]).map(function(score,i){return{shotNumber:i+1,score:score,position:(e.positions||[])[i]||null}});logs.push({t:e.t,d:e.d,m:6,tm:e.tm||Number(e.time)||null,pts:Number(e.pts)||0,shots:e.shots||[],sequence:seq,positions:e.positions||[],passed:!!e.passed,shootingStyle:e.shootingStyle||(k==='support'?'two_hand':'one_hand'),hand:k,pistol:p.name,test:true});tests.push({t:e.t,d:e.d,pts:e.pts,hit:e.hit,x:e.x,time:e.time,shootingStyle:k==='support'?'two_hand':'one_hand',hand:k,pistol:p.name})});
+   p.tracks[k].tests.forEach(function(e){var seq=(e.shots||[]).map(function(score,i){return{score:score,position:(e.positions||[])[i]||null}});logs.push({t:e.t,d:e.d,m:6,tm:e.tm||Number(e.time)||null,pts:Number(e.pts)||0,shots:e.shots||[],sequence:seq,positions:e.positions||[],passed:!!e.passed,shootingStyle:e.shootingStyle||(k==='support'?'two_hand':'one_hand'),hand:k,pistol:p.name,test:true});tests.push({t:e.t,d:e.d,pts:e.pts,hit:e.hit,x:e.x,time:e.time,shootingStyle:k==='support'?'two_hand':'one_hand',hand:k,pistol:p.name})});
   });
  });
  logs.sort(function(a,b){return a.t-b.t});
@@ -359,16 +359,14 @@ async function analyzeTraining(askQuestion){
  logs=logs.filter(function(e){return (historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  tests=tests.filter(function(e){return (historyStyle==='all'||e.hand===historyStyle)&&(historyPistol==='all'||e.pistol===historyPistol)&&(historyDistance==='all'||String(e.d)===historyDistance)});
  function pattern(e){
-  var pts=(e.sequence||[]).filter(function(s){return s.position&&Number.isFinite(+s.position.x)&&Number.isFinite(+s.position.y)}).map(function(s){return{x:(s.position.x-160)/112,y:(160-s.position.y)/112,n:s.shotNumber,score:s.score}});
+  var pts=(e.sequence||[]).filter(function(s){return s.position&&Number.isFinite(+s.position.x)&&Number.isFinite(+s.position.y)}).map(function(s){return{x:(s.position.x-160)/112,y:(160-s.position.y)/112,score:s.score}});
   if(!pts.length)return{positionData:false,reason:'Inga registrerade träffpositioner'};
   var n=pts.length,mx=pts.reduce(function(a,p){return a+p.x},0)/n,my=pts.reduce(function(a,p){return a+p.y},0)/n;
   var xx=pts.reduce(function(a,p){return a+(p.x-mx)*(p.x-mx)},0)/n,yy=pts.reduce(function(a,p){return a+(p.y-my)*(p.y-my)},0)/n,xy=pts.reduce(function(a,p){return a+(p.x-mx)*(p.y-my)},0)/n;
   var angle=.5*Math.atan2(2*xy,xx-yy),major=Math.sqrt(Math.max(0,(xx+yy)/2+Math.sqrt(Math.pow((xx-yy)/2,2)+xy*xy))),minor=Math.sqrt(Math.max(0,(xx+yy)/2-Math.sqrt(Math.pow((xx-yy)/2,2)+xy*xy)));
   var quadrants={upperLeft:0,upperRight:0,lowerLeft:0,lowerRight:0};
   pts.forEach(function(p){quadrants[(p.y>=0?'upper':'lower')+(p.x<0?'Left':'Right')]++});
-  var first=pts.slice(0,Math.ceil(n/2)),last=pts.slice(Math.floor(n/2));
-  function center(a){return a.length?{x:+(a.reduce(function(s,p){return s+p.x},0)/a.length).toFixed(3),y:+(a.reduce(function(s,p){return s+p.y},0)/a.length).toFixed(3)}:null}
-  return{positionData:true,coordinateScale:'target radius 1; x right-positive, y up-positive',shotCount:n,centroid:{x:+mx.toFixed(3),y:+my.toFixed(3)},horizontalStd:+Math.sqrt(xx).toFixed(3),verticalStd:+Math.sqrt(yy).toFixed(3),majorAxisStd:+major.toFixed(3),minorAxisStd:+minor.toFixed(3),majorAxisAngleDeg:+(angle*180/Math.PI).toFixed(1),quadrants:quadrants,firstHalfCenter:center(first),secondHalfCenter:center(last)};
+  return{positionData:true,coordinateScale:'target radius 1; x right-positive, y up-positive',shotCount:n,centroid:{x:+mx.toFixed(3),y:+my.toFixed(3)},horizontalStd:+Math.sqrt(xx).toFixed(3),verticalStd:+Math.sqrt(yy).toFixed(3),majorAxisStd:+major.toFixed(3),minorAxisStd:+minor.toFixed(3),majorAxisAngleDeg:+(angle*180/Math.PI).toFixed(1),quadrants:quadrants};
  }
  var byStyle=['one_hand','two_hand'].map(function(style){
   var a=logs.filter(function(e){return e.shootingStyle===style});
@@ -377,10 +375,10 @@ async function analyzeTraining(askQuestion){
  var summary={
   dataVersion:2,
   activeFilters:{shootingStyle:historyStyle,pistol:historyPistol,distanceYd:historyDistance},
-  interpretationRules:['Analysera enhands (one_hand) och tvåhands (two_hand) separat.','Positioner är relativa till tavlans centrum och normaliserade mot 5-ringens radie.','Skottnummer anger ordningsföljden i serien.','Dra inte slutsatser om avtryckarteknik, grepp eller siktesjustering enbart från träffbilden. Beskriv observerade mönster och ange möjliga orsaker som hypoteser.','Om positionsdata saknas ska du uttryckligen säga att träffbildsanalys inte kan göras för dessa serier.'],
+  interpretationRules:['Analysera enhands (one_hand) och tvåhands (two_hand) separat.','Positioner är relativa till tavlans centrum och normaliserade mot 5-ringens radie.','Träffarna registreras alltid från sämst till bäst. Registreringsordningen är INTE den faktiska skottordningen. Behandla träffarna som en oordnad samling och gör ingen tidsanalys inom serien.','Dra inte slutsatser om avtryckarteknik, grepp eller siktesjustering enbart från träffbilden. Beskriv observerade mönster och ange möjliga orsaker som hypoteser.','Om positionsdata saknas ska du uttryckligen säga att träffbildsanalys inte kan göras för dessa serier.'],
   totals:{series:logs.length,shots:logs.reduce(function(n,e){return n+e.shots.length},0),tests:tests.length},
   byShootingStyle:byStyle,
-  recentSeries:logs.slice(-16).map(function(e){return{date:new Date(e.t).toISOString().slice(0,10),pistol:e.pistol,shootingStyle:e.shootingStyle,distanceYd:e.d,shotsPerSeries:e.m,seconds:e.tm,requiredScore:e.r,passed:e.passed,sequence:e.sequence.map(function(s){return{shotNumber:s.shotNumber,score:s.score,position:s.position?{x:+((s.position.x-160)/112).toFixed(3),y:+((160-s.position.y)/112).toFixed(3)}:null}}),pattern:pattern(e)} }),
+  recentSeries:logs.slice(-16).map(function(e){return{date:new Date(e.t).toISOString().slice(0,10),pistol:e.pistol,shootingStyle:e.shootingStyle,distanceYd:e.d,shotsPerSeries:e.m,seconds:e.tm,requiredScore:e.r,passed:e.passed,sequence:e.sequence.map(function(s){return{score:s.score,position:s.position?{x:+((s.position.x-160)/112).toFixed(3),y:+((160-s.position.y)/112).toFixed(3)}:null}}),pattern:pattern(e)} }),
   recentTests:tests.slice(-12)
  }; button.disabled=true;button.textContent=askQuestion?'Skickar fråga…':'Analyserar…';output.textContent='Skickar filtrerad statistik'+(question?' och din fråga':'')+' till Gemini…';
  try{
@@ -406,7 +404,7 @@ function render(){
   if(msg)h+=mh(msg);
   h+='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px"><div style="display:flex;align-items:baseline;gap:7px;color:var(--ac);line-height:1"><span style="font:700 38px/1 Barlow Condensed,sans-serif">'+(cur.support=='support'?'MED':'UTAN')+'</span><span style="font:600 16px/1.2 Barlow Condensed,sans-serif;letter-spacing:1px">STÖDHAND</span></div><button class="btn" style="margin:0;white-space:nowrap;font-size:14px;padding:8px 10px" onclick="pick();msg=\'\';render()">Slumpa serie</button></div><div class="mu">'+esc(P().name)+' · '+(cur.m==1?'1 skott, 5 repetitioner':'2 skott (par), 3 par')+'</div><div class="big">'+cur.d+' <small>yd</small></div>'+
   '<div class="big" style="font-size:34px;margin-top:6px">'+I.t+' s <small>'+(cur.m==2?'per par':'per skott')+'</small> · krav '+(I.r+(I.r<10?'+':''))+'</div>'+
-  '<div class="mu" style="margin-top:6px">Precisionsnivå '+Math.min(I.c.i+1,3)+'/3 · steg '+(I.c.i+1)+'/3 · rekord steg '+(I.c.rec+1)+'</div>'+
+  '<div class="mu" style="margin-top:6px">Nivåsteg: '+(I.c.i+1)+' av '+I.st.length+' · rekordsteg '+(I.c.rec+1)+'</div>'+
   '<div class="mu">Start från 45 grader. Skott utanför tiden anges som Bom.</div></div><div class="card">';
   h+='<div><b>Skott</b><div class="shot-tabs">'+Array.from({length:I.n},function(_,i){return '<button class="'+(activeShot===i?'active ':'')+(shots[i]&&shotPositions[i]?'filled':'')+'" onclick="selectShot('+i+')" aria-label="Skott '+(i+1)+'">'+(i+1)+'</button>'}).join('')+'</div></div>';
   h+='<div class="mu">Aktivt skott '+(activeShot+1)+' av '+I.n+'. Välj poäng och tryck på tavlan för att placera träffen. Dra markören för att finjustera.</div>';
@@ -429,7 +427,7 @@ function render(){
   h+='<div class="card"><h2>Pistoler</h2><div style="display:flex;flex-wrap:wrap;gap:9px 12px">'+S.pistols.map(function(p){return '<div style="display:flex;flex-direction:column;align-items:center;min-width:72px"><button class="btn" style="margin:0;width:100%;'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button><button class="pistol-toggle '+(p.on===0?'off':'')+'" onclick="tg('+p.id+')">'+(p.on===0?'AV':'PÅ')+'</button></div>'}).join('')+'</div></div>';
   h+='<div class="card"><h2>Nivå per avstånd</h2><div class="row"><button class="'+(statusSupport=='support'?'s':'')+'" onclick="statusSupport=\'support\';activeTrackId=statusSupport;render()">Med stödhand</button><button class="'+(statusSupport=='unsupported'?'s':'')+'" onclick="statusSupport=\'unsupported\';activeTrackId=statusSupport;render()">Utan stödhand</button></div><div class="mu">Aktuellt steg · mätare · rekord</div><table><tr><th>yd</th><th>1 skott</th><th>2 skott</th></tr>';
   D.forEach(function(d){h+='<tr><td><b>'+d+'</b></td>'+[1,2].map(function(m){var c=cell(m,d),on=T().enabled[m+'-'+d]!==false;return '<td><div>'+lbl(m,d,c.i)+'</div><span class="mu">'+(c.m>0?'+':'')+c.m+' · rek '+lbl(m,d,c.rec)+'</span><br><button class="level-toggle '+(on?'':'off')+'" onclick="toggleLevel('+m+','+d+')">'+(on?'PÅ':'AV')+'</button></td>'}).join('')+'</tr>'});
-  h+='</table></div><div class="card"><h2>Tidsinställningar</h2><div class="mu">Välj profil separat för enskott och tvåskott. Först klaras ring 1–3 på grundtiden, därefter upprepas ring 1–3 med 0,5 s kortare tid.</div><div class="row"><button class="'+(timeMode==1?'s':'')+'" onclick="timeMode=1;render()">1 skott</button><button class="'+(timeMode==2?'s':'')+'" onclick="timeMode=2;render()">2 skott</button></div><select onchange="setTimePreset(timeMode,this.value)"><option value="latt" '+(T().timeSettings[timeMode].preset=='latt'?'selected':'')+'>Lätt</option><option value="medel" '+(T().timeSettings[timeMode].preset=='medel'?'selected':'')+'>Medel</option><option value="svar" '+(T().timeSettings[timeMode].preset=='svar'?'selected':'')+'>Svår</option></select><table><tr><th>Avstånd</th><th>Grundtid</th><th>Justera</th></tr>'+D.map(function(d){return '<tr><td>'+d+' yd</td><td>'+baseTime(timeMode,d).toFixed(1)+' s</td><td><button class="btn" onclick="setTimeAdjust('+timeMode+','+d+',-0.5)">−</button><button class="btn" onclick="setTimeAdjust('+timeMode+','+d+',0.5)">+</button></td></tr>'}).join('')+'</table><div class="mu">Justeringen gäller grundtiden. De tre första stegen använder grundtiden och de tre följande använder 0,5 s kortare tid.</div></div><div class="card"><h2>Justera steg</h2><div class="mu">Flytta en nivå manuellt.</div>';
+  h+='</table></div><div class="card"><h2>Tidsinställningar</h2><div class="mu">Välj profil separat för enskott och tvåskott. Först klaras precisionskraven på grundtiden, därefter upprepas de med 0,5 s kortare tid.</div><div class="row"><button class="'+(timeMode==1?'s':'')+'" onclick="timeMode=1;render()">1 skott</button><button class="'+(timeMode==2?'s':'')+'" onclick="timeMode=2;render()">2 skott</button></div><select onchange="setTimePreset(timeMode,this.value)"><option value="latt" '+(T().timeSettings[timeMode].preset=='latt'?'selected':'')+'>Lätt</option><option value="medel" '+(T().timeSettings[timeMode].preset=='medel'?'selected':'')+'>Medel</option><option value="svar" '+(T().timeSettings[timeMode].preset=='svar'?'selected':'')+'>Svår</option></select><table><tr><th>Avstånd</th><th>Grundtid</th><th>Justera</th></tr>'+D.map(function(d){return '<tr><td>'+d+' yd</td><td>'+baseTime(timeMode,d).toFixed(1)+' s</td><td><button class="btn" onclick="setTimeAdjust('+timeMode+','+d+',-0.5)">−</button><button class="btn" onclick="setTimeAdjust('+timeMode+','+d+',0.5)">+</button></td></tr>'}).join('')+'</table><div class="mu">Justeringen gäller grundtiden. De tre första stegen använder grundtiden och de tre följande använder 0,5 s kortare tid.</div></div><div class="card"><h2>Justera steg</h2><div class="mu">Flytta en nivå manuellt.</div>';
   D.forEach(function(d){[1,2].forEach(function(m){h+='<div class="row"><b style="width:70px">'+d+' yd '+m+'sk</b><button onclick="mv('+m+','+d+',-1)">−</button><button style="flex:3" disabled>'+lbl(m,d,cell(m,d).i)+'</button><button onclick="mv('+m+','+d+',1)">+</button></div>'})});
   h+='</div>';
  }
@@ -538,7 +536,7 @@ function exportCSV(){
  S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
   var all=(p.tracks[k].log||[]).map(function(e){return Object.assign({},e,{_type:'Träning'})}).concat((p.tracks[k].tests||[]).map(function(e){return Object.assign({},e,{_type:'Test'})}));
   all.forEach(function(e){
-   var seq=e.shotSequence&&e.shotSequence.length?e.shotSequence:(e.shots||[]).map(function(score,i){return{shotNumber:i+1,score:score,position:(e.positions||[])[i]||null}});
+   var seq=(e.shots||[]).map(function(score,i){return{score:score,position:(e.positions||[])[i]||null}});
    var date=new Date(e.t),dateText=date.toISOString().slice(0,10),timeText=date.toISOString().slice(11,19);
    var style=e.shootingStyle||(e.support||k)==='support'?'Med stödhand':'Utan stödhand';
    var total=e.pts!==undefined?e.pts:(e.shots||[]).reduce(function(a,z){return a+val(z)},0);
