@@ -152,7 +152,7 @@ function pick(keep){
  activateSeries(chosen);
  queuedCur=chooseSeries(cur,false);
 }
-function info(){activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);return{st:st,c:c,t:st[c.i][0],r:st[c.i][1],n:cur.m==1?5:6}}
+function info(){if(!cur)throw new Error('Ingen aktiv serie är vald.');activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);if(!st||!st.length)throw new Error('Nivåstegen saknas för avståndet.');c.i=Math.max(0,Math.min(st.length,Number(c.i)||0));var ix=Math.min(c.i,st.length-1);return{st:st,c:c,t:st[ix][0],r:st[ix][1],n:cur.m==1?5:6}}
 function done(){var I=info();for(var i=0;i<I.n;i++)if(!shots[i]||!shotPositions[i])return false;return true}
 function submit(){try{submitSeries()}catch(e){console.error('Fel när serien skulle sparas:',e);msg={c:'bad',t:'Kunde inte spara serien',l:'Ett tekniskt fel uppstod: '+esc(e&&e.message?e.message:'okänt fel')+'. Ladda om sidan och försök igen.',x:[],m:0,s:'Dina tidigare resultat ska finnas kvar.'};try{render()}catch(ignore){}}}
 function submitSeries(){
