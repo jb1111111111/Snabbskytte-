@@ -75,7 +75,7 @@ var D=[3,7,15,25,50],Z=['Bom','5','6','7','8','9','10','X'],KEY='skytte1';
 var PROFILES={latt:[3,3,3,3.5,4],medel:[2,2,2,2.5,3],svar:[1.5,1.5,1.5,2,2.5]};
 var RINGS={3:[8,9,10,'X'],7:[8,9,10,'X'],15:[7,8,9,'X'],25:[7,8,9,'X'],50:[5,6,7,'X']};
 var TEST_TIMES={3:4,7:5,15:6,25:7,50:10};
-var tab='h',cur=null,queuedCur=null,shots=[],shotPositions=[],activeShot=0,shots6=[],shotPositions6=[],testActiveShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1,testMode=false;
+var tab='h',cur=null,queuedCur=null,shots=[],shotPositions=[],activeShot=0,shots6=[],shotPositions6=[],testActiveShot=0,msg='',S=load(),activeTrackId='support',statusSupport='support',testSupport='support',timeMode=1,testMode=false,seriesTimeInput='';
 if(!S.testFlow)S.testFlow={since:0,nextAt:[8,10,12][Math.floor(Math.random()*3)]};
 if(!Array.isArray(S.testFlow.distanceBag))S.testFlow.distanceBag=[];
 function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)return s;if(s&&s.cells)return{pistols:[{id:1,name:'Pistol 1',on:1,cells:s.cells,log:s.log||[],tests:s.tests||[]}]}}catch(e){}return{pistols:[{id:1,name:'Pistol 1',on:1,cells:{},log:[],tests:[]}]}}
@@ -143,7 +143,7 @@ function activateSeries(chosen){
  if(!chosen){cur=null;return}
  pid=chosen.pid;activeTrackId=chosen.support;
  cur={pid:chosen.pid,d:chosen.d,m:chosen.m,support:chosen.support};
- shots=[];shotPositions=[];activeShot=0;
+ shots=[];shotPositions=[];activeShot=0;seriesTimeInput='';
 }
 function pick(keep){
  testMode=false;tab='t';
@@ -154,9 +154,10 @@ function pick(keep){
 }
 function info(){activeTrackId=cur.support||'support';var st=steps(cur.m,cur.d),c=cell(cur.m,cur.d);return{st:st,c:c,t:st[c.i][0],r:st[c.i][1],n:cur.m==1?5:6}}
 function done(){var I=info();for(var i=0;i<I.n;i++)if(!shots[i]||!shotPositions[i])return false;return true}
-function submit(){
- var I=info(),c=I.c,pts=0,x=0,actualTime=Number(document.getElementById('seriesMaxTime').value);
- if(!Number.isFinite(actualTime)||actualTime<=0){alert('Ange längsta repetitionstiden för hela serien.');return}
+function submit(){try{submitSeries()}catch(e){console.error('Fel när serien skulle sparas:',e);msg={c:'bad',t:'Kunde inte spara serien',l:'Ett tekniskt fel uppstod: '+esc(e&&e.message?e.message:'okänt fel')+'. Ladda om sidan och försök igen.',x:[],m:0,s:'Dina tidigare resultat ska finnas kvar.'};try{render()}catch(ignore){}}}
+function submitSeries(){
+ var I=info(),c=I.c,pts=0,x=0,timeField=document.getElementById('seriesMaxTime'),actualTime=Number(String(timeField?timeField.value:'').trim().replace(',','.'));
+ if(!Number.isFinite(actualTime)||actualTime<=0){msg={c:'mid',t:'Ange skjuttiden',l:'Skriv längsta repetitionstiden för hela serien, till exempel 1,60 sekunder.',x:[],m:0,s:'Använd sekunder.'};render();return}
  shots.forEach(function(z){pts+=val(z);if(z==='X')x++});
  var before=c.i,bestIndex=-1;
  I.st.forEach(function(step,index){if(actualTime<=step[0]+0.0001&&shots.every(function(z){return meetsScore(z,step[1])}))bestIndex=index});
@@ -411,7 +412,7 @@ function render(){
   h+='<div class="score-grid">'+Z.map(function(z){return '<button class="'+(shots[activeShot]===z?'s'+(z==='Bom'?' bom':''):'')+'" onclick="shot('+activeShot+',\''+z+'\')">'+z+'</button>'}).join('')+'</div>';
   h+=targetMarkup(I.n,activeShot);
   h+='<div class="target-note">Registrera skotten från sämst till bäst. Ordningen är endast för inmatning – den motsvarar inte skottens faktiska tidsordning.</div>';
-  h+='<label for="seriesMaxTime" style="display:block;margin-top:12px;font-weight:600">Längsta repetitionstid för hela serien (sekunder)</label><input id="seriesMaxTime" type="number" min="0.1" step="0.01" inputmode="decimal" placeholder="T.ex. 1.50" style="margin-top:5px"><div class="mu">'+(cur.m===1?'Ange den längsta tiden av dina 5 enskott.':'Ange den längsta tiden av dina 3 dubbelserier.')+'</div>';
+  h+='<label for="seriesMaxTime" style="display:block;margin-top:12px;font-weight:600">Längsta repetitionstid för hela serien (sekunder)</label><input id="seriesMaxTime" type="text" inputmode="decimal" value="'+esc(seriesTimeInput)+'" oninput="seriesTimeInput=this.value" placeholder="T.ex. 1,60" style="margin-top:5px"><div class="mu">'+(cur.m===1?'Ange den längsta tiden av dina 5 enskott.':'Ange den längsta tiden av dina 3 dubbelserier.')+'</div>';
   if(queuedCur){
    var nextP=S.pistols.filter(function(p){return p.id==queuedCur.pid})[0];ensureTracks(nextP);
    var nextTrack=nextP.tracks[queuedCur.support],nextCell=nextTrack.cells[queuedCur.m+'-'+queuedCur.d]||{i:0},savePid=pid,saveTrack=activeTrackId;
