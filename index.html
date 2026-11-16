@@ -78,8 +78,8 @@ function load(){try{var s=JSON.parse(localStorage.getItem(KEY));if(s&&s.pistols)
 function ensureTracks(p){if(!p.tracks)p.tracks={support:{cells:p.cells||{},log:p.log||[],tests:p.tests||[]},unsupported:{cells:{},log:[],tests:[]}};['support','unsupported'].forEach(function(k){if(!p.tracks[k])p.tracks[k]={cells:{},log:[],tests:[]};var tr=p.tracks[k];if(!tr.cells)tr.cells={};if(!tr.log)tr.log=[];if(!tr.tests)tr.tests=[];if(!tr.enabled)tr.enabled={};if(!tr.timeSettings)tr.timeSettings={};[1,2].forEach(function(m){if(!tr.timeSettings[m])tr.timeSettings[m]={preset:'medel',adjust:{}};if(!tr.timeSettings[m].adjust)tr.timeSettings[m].adjust={}});D.forEach(function(d){[1,2].forEach(function(m){var key=m+'-'+d;if(tr.enabled[key]===undefined)tr.enabled[key]=true})})})}
 if(S.version!==2){S.pistols.forEach(function(p){p.tracks={support:{cells:{},log:[],tests:[]},unsupported:{cells:{},log:[],tests:[]}};p.cells={};p.log=[];p.tests=[]});S.version=2;}
 S.pistols.forEach(ensureTracks);
-var cloudUser=null, cloudReady=false, cloudSaving=false;
-function setSync(t){var el=document.getElementById('syncstatus');if(el)el.textContent=t}
+var cloudUser=null, cloudReady=false, cloudSaving=false,syncStatusText='Lokal lagring';
+function setSync(t){syncStatusText=t;var el=document.getElementById('syncstatus');if(el)el.textContent=t}
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
   if(cloudUser && cloudReady && window.sb){
@@ -462,7 +462,7 @@ function render(){
  }
  if(tab=='d'){
   activeTrackId=statusSupport;
-  h+='<div class="card"><h2>Molnsynk och konto</h2><div class="row" style="justify-content:space-between;flex-wrap:wrap"><span id="syncstatus" class="mu">Lokal lagring</span><button class="btn" id="accountbtn" style="margin:0;background:var(--bg);border-color:var(--ac);color:var(--ac);font-weight:700" onclick="openLogin()">LOGGA IN / SKAPA KONTO</button></div></div>';
+  h+='<div class="card"><h2>Molnsynk och konto</h2><div class="row" style="justify-content:space-between;flex-wrap:wrap"><span id="syncstatus" class="mu">'+esc(syncStatusText)+'</span><button class="btn" id="accountbtn" style="margin:0;background:var(--bg);border-color:var(--ac);color:var(--ac);font-weight:700" onclick="openLogin()">'+(cloudUser?'LOGGA UT':'LOGGA IN / SKAPA KONTO')+'</button></div></div>';
   h+='<div class="card"><h2>Aktiva pistoler</h2><div style="display:flex;flex-wrap:wrap;gap:9px 12px">'+S.pistols.map(function(p){return '<div style="display:flex;flex-direction:column;align-items:center;min-width:72px"><button class="btn" style="margin:0;width:100%;'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button><button class="pistol-toggle '+(p.on===0?'off':'')+'" onclick="tg('+p.id+')">'+(p.on===0?'AV':'PÅ')+'</button></div>'}).join('')+'</div></div>';
   h+='<div class="card"><h2>Nivå per avstånd</h2><div class="row"><button class="'+(statusSupport=='support'?'s':'')+'" onclick="statusSupport=\'support\';activeTrackId=statusSupport;render()">Med stödhand</button><button class="'+(statusSupport=='unsupported'?'s':'')+'" onclick="statusSupport=\'unsupported\';activeTrackId=statusSupport;render()">Utan stödhand</button></div><div class="mu">Aktuellt steg · mätare · rekord</div><table><tr><th>yd</th><th>1 skott</th><th>2 skott</th></tr>';
   D.forEach(function(d){h+='<tr><td><b>'+d+'</b></td>'+[1,2].map(function(m){var c=cell(m,d),on=T().enabled[m+'-'+d]!==false;return '<td><div>'+lbl(m,d,c.i)+'</div><span class="mu">'+(c.m>0?'+':'')+c.m+' · rek '+lbl(m,d,c.rec)+'</span><br><button class="level-toggle '+(on?'':'off')+'" onclick="toggleLevel('+m+','+d+')">'+(on?'PÅ':'AV')+'</button></td>'}).join('')+'</tr>'});
