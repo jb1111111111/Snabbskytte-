@@ -64,10 +64,6 @@ h2{font:700 22px 'Barlow Condensed',sans-serif;margin:0 0 8px}
   <div id="authmsg" class="mu" style="margin-top:8px">Logga in för molnsynk, eller fortsätt utan konto.</div>
 </section>
 <div id="app">
-<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 8px">
-  <span id="syncstatus" class="mu">Lokal lagring</span>
-  <button class="btn" id="accountbtn" style="margin:0;background:var(--sf);border-color:var(--ac);color:var(--ac);font-weight:700" onclick="openLogin()">LOGGA IN / SKAPA KONTO</button>
-</div>
 <nav id="nav"></nav><div id="v"></div>
 </div></main>
 <script>
@@ -466,6 +462,7 @@ function render(){
  }
  if(tab=='d'){
   activeTrackId=statusSupport;
+  h+='<div class="card"><h2>Molnsynk och konto</h2><div class="row" style="justify-content:space-between;flex-wrap:wrap"><span id="syncstatus" class="mu">Lokal lagring</span><button class="btn" id="accountbtn" style="margin:0;background:var(--bg);border-color:var(--ac);color:var(--ac);font-weight:700" onclick="openLogin()">LOGGA IN / SKAPA KONTO</button></div></div>';
   h+='<div class="card"><h2>Aktiva pistoler</h2><div style="display:flex;flex-wrap:wrap;gap:9px 12px">'+S.pistols.map(function(p){return '<div style="display:flex;flex-direction:column;align-items:center;min-width:72px"><button class="btn" style="margin:0;width:100%;'+(p.id==pid?'background:var(--ac);color:var(--on);border-color:var(--ac)':'')+'" onclick="selp('+p.id+')">'+esc(p.name)+'</button><button class="pistol-toggle '+(p.on===0?'off':'')+'" onclick="tg('+p.id+')">'+(p.on===0?'AV':'PÅ')+'</button></div>'}).join('')+'</div></div>';
   h+='<div class="card"><h2>Nivå per avstånd</h2><div class="row"><button class="'+(statusSupport=='support'?'s':'')+'" onclick="statusSupport=\'support\';activeTrackId=statusSupport;render()">Med stödhand</button><button class="'+(statusSupport=='unsupported'?'s':'')+'" onclick="statusSupport=\'unsupported\';activeTrackId=statusSupport;render()">Utan stödhand</button></div><div class="mu">Aktuellt steg · mätare · rekord</div><table><tr><th>yd</th><th>1 skott</th><th>2 skott</th></tr>';
   D.forEach(function(d){h+='<tr><td><b>'+d+'</b></td>'+[1,2].map(function(m){var c=cell(m,d),on=T().enabled[m+'-'+d]!==false;return '<td><div>'+lbl(m,d,c.i)+'</div><span class="mu">'+(c.m>0?'+':'')+c.m+' · rek '+lbl(m,d,c.rec)+'</span><br><button class="level-toggle '+(on?'':'off')+'" onclick="toggleLevel('+m+','+d+')">'+(on?'PÅ':'AV')+'</button></td>'}).join('')+'</tr>'});
