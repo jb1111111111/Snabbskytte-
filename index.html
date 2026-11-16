@@ -211,12 +211,17 @@ function resetRecords(){
  save();render();
 }
 function deleteAllTrainingSeries(){
- var count=0,seriesCount=0,testCount=0;
- S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){seriesCount+=p.tracks[k].log.length;testCount+=p.tracks[k].tests.length})});
- count=seriesCount+testCount;
- if(!count){alert('Det finns inga träningsserier eller testresultat att ta bort.');return}
- if(!confirm('Ta bort ALL träning: '+seriesCount+' vanliga serier och '+testCount+' testresultat från alla pistoler och båda träningssätten? Åtgärden kan inte ångras.'))return;
- S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){p.tracks[k].log=[];p.tracks[k].tests=[]})});
+ var seriesCount=0,testCount=0,hasProgress=false;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
+  var tr=p.tracks[k];seriesCount+=tr.log.length;testCount+=tr.tests.length;
+  Object.keys(tr.cells||{}).forEach(function(key){var c=tr.cells[key]||{};if((Number(c.i)||0)>0||(Number(c.rec)||0)>0||(Number(c.m)||0)>0)hasProgress=true});
+ })});
+ if(!seriesCount&&!testCount&&!hasProgress){alert('Det finns ingen träningshistorik eller statistik att nollställa.');return}
+ if(!confirm('Nollställa all träningsstatistik för alla pistoler och båda träningssätten? Detta tar bort '+seriesCount+' serier och '+testCount+' testresultat samt nollställer nivåprogression och rekord. Dina pistolinställningar, tidsinställningar och aktiverade nivåer behålls. Åtgärden kan inte ångras.'))return;
+ S.pistols.forEach(function(p){ensureTracks(p);['support','unsupported'].forEach(function(k){
+  var tr=p.tracks[k];tr.log=[];tr.tests=[];
+  Object.keys(tr.cells||{}).forEach(function(key){var c=tr.cells[key];if(c){c.i=0;c.m=0;c.rec=0}});
+ })});
  historySelectedIndex=-1;save();render();
 }
 function historyTarget(e,size){
